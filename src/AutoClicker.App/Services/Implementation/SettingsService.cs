@@ -1,0 +1,52 @@
+using System.IO;
+using System.Text.Json;
+using AutoClicker.App.Models;
+using AutoClicker.App.Serialization;
+using AutoClicker.App.Services.Interfaces;
+
+namespace AutoClicker.App.Services.Implementation;
+
+/// <summary>
+/// 配置持久化服务 — 将 AppSettings 序列化为 JSON 存储到 %LocalAppData%
+/// </summary>
+public class SettingsService : ISettingsService
+{
+    private static readonly string SettingsPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "AutoClicker",
+        "settings.json");
+
+    /// <inheritdoc />
+    public AppSettings Settings { get; private set; } = new();
+
+    /// <inheritdoc />
+    public void Save()
+    {
+        var dir = Path.GetDirectoryName(SettingsPath);
+        if (dir is not null)
+            Directory.CreateDirectory(dir);
+
+        var json = JsonSerializer.Serialize(Settings, AppJsonSerializerContext.Default.AppSettings);
+        File.WriteAllText(SettingsPath, json);
+    }
+
+    /// <inheritdoc />
+    public void Load()
+    {
+        if (!File.Exists(SettingsPath))
+            return;
+
+        try
+        {
+            var json = File.ReadAllText(SettingsPath);
+            var loaded = JsonSerializer.Deserialize(json, AppJsonSerializerContext.Default.AppSettings);
+            if (loaded is not null)
+                Settings = loaded;
+        }
+        catch
+        {
+            // JSON 损坏或格式变更时使用默认配置
+            Settings = new AppSettings();
+        }
+    }
+}

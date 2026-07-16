@@ -1,0 +1,41 @@
+# .NET 构建产物
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# VS Code / C# Dev Kit
+.vs/
+*.lscache
+*_wpftmp*
+
+# 发布目录
+publish/
+dist/
+
+# 运行时文件
+*.exe
+*.dll
+*.pdb
+*.runtimeconfig.json
+
+# NuGet 包
+*.nupkg
+**/packages/*
+
+# 临时文件
+*.tmp
+*.log
+*.swp
+*.cache
+Thumbs.db
+
+# IDE
+.idea/
+*.sln.ide/
+
+# Claude Code (个人设置)
+.claude/

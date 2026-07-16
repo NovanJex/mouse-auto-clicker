@@ -1,0 +1,52 @@
+name: Bug 报告
+description: 报告一个 Bug，帮助我们改进
+labels: ["bug"]
+body:
+  - type: textarea
+    attributes:
+      label: 问题描述
+      description: 清晰简洁地描述这个 Bug 是什么
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 复现步骤
+      description: 按步骤描述如何触发这个 Bug
+      placeholder: |
+        1. 打开应用
+        2. 设置点击模式为 '...'
+        3. 点击 '....'
+        4. 观察到错误
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 期望行为
+      description: 你期望发生什么
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 截图（可选）
+      description: 如果有截图，请附上
+  - type: input
+    attributes:
+      label: 应用版本
+      description: 在应用标题栏或关于对话框中查看
+      placeholder: v1.2.1
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Windows 版本
+      placeholder: Windows 10 22H2 / Windows 11 23H2
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: 运行模式
+      options:
+        - 单文件 exe（框架依赖）
+        - 单文件 exe（自包含）
+        - 安装包（Setup.exe）
+        - 直接源码运行
