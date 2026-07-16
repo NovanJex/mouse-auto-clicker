@@ -20,16 +20,16 @@ Windows PC 端鼠标自动连点器，支持自定义坐标点击、鼠标宏录
 
 ---
 
-## 📥 Download
+## 📥 下载
 
-Go to [Releases](https://github.com/nnnongjun/mouse-auto-clicker/releases) and download the latest version:
+前往 [Releases](https://github.com/nnnongjun/mouse-auto-clicker/releases) 页面下载最新版本：
 
-| File | Type | Size |
+| 文件 | 类型 | 大小 |
 | ---- | ---- | ---- |
-| `鼠标连点器_v1.2.1.exe` | Self-contained (no runtime needed) | ~150 MB |
-| `鼠标连点器_Setup_v1.2.1.exe` | Inno Setup installer (auto-installs .NET 8) | ~2.3 MB |
+| `鼠标连点器_v1.2.1.exe` | 自包含单文件（无需安装运行时，双击即用） | ~150 MB |
+| `鼠标连点器_Setup_v1.2.1.exe` | Inno Setup 安装包（自动安装 .NET 8 运行时） | ~2.3 MB |
 
-> **Recommended**: Use the **installer** (`Setup_`), which automatically detects and installs .NET 8 Desktop Runtime if needed.
+> **推荐**: Windows 用户使用 **安装包**（`Setup_`），会自动检测并安装 .NET 8 Desktop Runtime。
 
 ## ✨ 功能特性
 
