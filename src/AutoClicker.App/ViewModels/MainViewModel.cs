@@ -596,7 +596,8 @@ public partial class MainViewModel : ObservableObject
         StatusText = "运行中";
 
         var clickCycle = CreateClickCycle();
-        await _clickScheduler.StartAsync(clickCycle, _appCts.Token);
+        int intervalMs = GetEffectiveDelayMs();
+        await _clickScheduler.StartAsync(clickCycle, intervalMs, _appCts.Token);
     }
 
     /// <summary>停止连点循环</summary>
@@ -654,9 +655,6 @@ public partial class MainViewModel : ObservableObject
                 Application.Current.Dispatcher.Invoke(() =>
                     _mouseSimulator.Click(clickMode));
             }
-
-            // 等待下一次循环
-            await WaitAsync(delayMs, ct);
         };
     }
 
@@ -673,15 +671,25 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 高精度等待 — &lt;15ms 使用 SpinWait 自旋，&gt;=15ms 使用 Task.Delay 异步延迟
+    /// 高精度等待 — 用 Stopwatch 绝对时点计时，不受 CPU 频率波动影响
     /// </summary>
     private static async Task WaitAsync(int milliseconds, CancellationToken ct)
     {
+        if (milliseconds <= 0) return;
+
+        double ticksPerMs = Stopwatch.Frequency / 1000.0;
+
         if (milliseconds < 15)
         {
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < milliseconds && !ct.IsCancellationRequested)
-                Thread.SpinWait(100);
+            long targetTicks = Stopwatch.GetTimestamp() + (long)(milliseconds * ticksPerMs);
+            while (Stopwatch.GetTimestamp() < targetTicks && !ct.IsCancellationRequested)
+            {
+                long remaining = targetTicks - Stopwatch.GetTimestamp();
+                if (remaining > (long)(2 * ticksPerMs))
+                    Thread.Sleep(0);        // 剩余 >2ms 让出 CPU 时间片
+                else
+                    Thread.SpinWait(50);     // 最后 2ms 内自旋
+            }
         }
         else
         {

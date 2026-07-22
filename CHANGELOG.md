@@ -2,6 +2,18 @@
 
 本文档记录鼠标连点器所有重要变更。
 
+## [v1.2.2] - 2025-07-22
+
+### 修复
+- **定时漂移修复**：连点器长时间运行后越跑越快的问题已修复
+  - 调度器改为固定间隔周期校正（每个周期从起点开始计时，等待剩余时长）
+  - 高精度等待改用 `Stopwatch.GetTimestamp` 绝对时点比较，彻底消除 CPU 频率波动影响
+
+### 改进
+- 发布文件名统一使用英文 `MouseAutoClicker_` 前缀（GitHub Release 兼容）
+- 自包含版本优化（`InvariantGlobalization` + `UseSystemResourceKeys`）
+- README 下载说明更新为三版本
+
 ## [v1.2.1] - 2025-07-07
 
 ### 新增

@@ -1,4 +1,4 @@
-# 鼠标连点器 (AutoClicker) — v1.2.1
+# 鼠标连点器 (AutoClicker) — v1.2.2
 
 <p align="center">
   <img src="src/AutoClicker.App/Resources/Icons/app.ico" width="80" alt="Logo">
@@ -26,10 +26,11 @@ Windows PC 端鼠标自动连点器，支持自定义坐标点击、鼠标宏录
 
 | 文件 | 类型 | 大小 |
 | ---- | ---- | ---- |
-| `MouseAutoClicker_v1.2.1.exe` | 自包含单文件（无需安装运行时，双击即用） | ~150 MB |
-| `MouseAutoClicker_Setup_v1.2.1.exe` | Inno Setup 安装包（自动安装 .NET 8 运行时） | ~2.3 MB |
+| `MouseAutoClicker_v1.2.2.exe` | 框架依赖单文件（需安装 .NET 8 Desktop Runtime） | ~700 KB |
+| `MouseAutoClicker_v1.2.2_Full.exe` | 自包含单文件（无需安装运行时，双击即用） | ~147 MB |
+| `MouseAutoClicker_Setup_v1.2.2.exe` | Inno Setup 安装包（自动安装 .NET 8 运行时） | ~2.3 MB |
 
-> **推荐**: Windows 用户使用 **安装包**（`Setup_`），会自动检测并安装 .NET 8 Desktop Runtime。
+> **推荐**: 能联网的用户优先使用 **安装包**（`Setup_`），自动处理一切依赖。已安装 .NET 8 的用户下载 `v1.2.2.exe`（仅 700KB）。
 
 ## ✨ 功能特性
 

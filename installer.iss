@@ -2,7 +2,7 @@
 ; 框架依赖 + LZMA2 极限压缩 + 自动安装 .NET 运行时
 
 #define MyAppName "鼠标连点器"
-#define MyAppVersion "1.2.1"
+#define MyAppVersion "1.2.2"
 #define MyAppPublisher "AutoClicker"
 #define MyAppExeName "鼠标连点器.exe"
 
@@ -18,7 +18,7 @@ DefaultGroupName={#MyAppName}
 UninstallDisplayName={#MyAppName}
 
 OutputDir=dist
-OutputBaseFilename=鼠标连点器_Setup_v{#MyAppVersion}
+OutputBaseFilename=MouseAutoClicker_Setup_v{#MyAppVersion}
 
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -43,7 +43,7 @@ Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.i
 Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "附加快捷方式:"
 
 [Files]
-Source: "publish\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "publish\installer-src\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
