@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.2.1-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.2.2-blue" alt="Version">
   <img src="https://img.shields.io/badge/.NET-8.0-purple" alt=".NET">
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
@@ -26,11 +26,10 @@ Windows PC 端鼠标自动连点器，支持自定义坐标点击、鼠标宏录
 
 | 文件 | 类型 | 大小 |
 | ---- | ---- | ---- |
-| `MouseAutoClicker_v1.2.2.exe` | 框架依赖单文件（需安装 .NET 8 Desktop Runtime） | ~700 KB |
-| `MouseAutoClicker_v1.2.2_Full.exe` | 自包含单文件（无需安装运行时，双击即用） | ~147 MB |
+| `MouseAutoClicker_v1.2.2.exe` | 自包含单文件（无需安装运行时，双击即用） | ~147 MB |
 | `MouseAutoClicker_Setup_v1.2.2.exe` | Inno Setup 安装包（自动安装 .NET 8 运行时） | ~2.3 MB |
 
-> **推荐**: 能联网的用户优先使用 **安装包**（`Setup_`），自动处理一切依赖。已安装 .NET 8 的用户下载 `v1.2.2.exe`（仅 700KB）。
+> **推荐**: 首次使用请下载 **安装包**（`Setup_`），自动检测并安装 .NET 8 Desktop Runtime。
 
 ## ✨ 功能特性
 
@@ -156,6 +155,7 @@ ISCC.exe installer.iss
 
 | 版本 | 日期 | 主要变更 |
 | ---- | ---- | -------- |
+| v1.2.2 | 2025-07-22 | 修复定时漂移（越跑越快）、英文文件名、构建优化 |
 | v1.2.1 | 2025-07-07 | 无光标点击（PostClickAt）、Inno Setup 安装包 |
 | v1.2.0 | 2025-07-06 | 多键位绑定触发、定时点击任务 |
 | v1.1.0 | 2025-06-21 | 鼠标宏录制/回放、单个键盘触发键 |
