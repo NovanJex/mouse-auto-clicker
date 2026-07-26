@@ -1,7 +1,11 @@
-# 鼠标连点器 (AutoClicker) — v1.2.3
-
 <p align="center">
   <img src="src/AutoClicker.App/Resources/Icons/app.ico" width="80" alt="Logo">
+</p>
+
+<h1 align="center">鼠标连点器 (MouseAutoClicker)</h1>
+
+<p align="center">
+  <b>中文</b> | <a href="README_EN.md">English</a>
 </p>
 
 <p align="center">
@@ -22,7 +26,7 @@ Windows PC 端鼠标自动连点器，支持自定义坐标点击、鼠标宏录
 
 ## 📥 下载
 
-前往 [Releases](https://github.com/nnnongjun/mouse-auto-clicker/releases) 页面下载最新版本：
+前往 [Releases](https://github.com/NovanJex/mouse-auto-clicker/releases) 页面下载最新版本：
 
 | 文件 | 类型 | 大小 |
 | ---- | ---- | ---- |
@@ -133,7 +137,7 @@ AutoClicker/
 ### 构建
 
 ```bash
-git clone https://github.com/nnnongjun/mouse-auto-clicker.git
+git clone https://github.com/NovanJex/mouse-auto-clicker.git
 cd auto-clicker
 dotnet build -c Release
 ```
@@ -178,4 +182,4 @@ ISCC.exe installer.iss
 
 如果你觉得这个项目有用，请给一个 Star ⭐ 支持一下！
 
-[![Star History Chart](https://api.star-history.com/svg?repos=nnnongjun/mouse-auto-clicker&type=Date)](https://star-history.com/#nnnongjun/mouse-auto-clicker&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=NovanJex/mouse-auto-clicker&type=Date)](https://star-history.com/#NovanJex/mouse-auto-clicker&Date)
