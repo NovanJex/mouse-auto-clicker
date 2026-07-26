@@ -135,12 +135,12 @@ ISCC.exe installer.iss
 
 | Version | Date | Highlights |
 | ------- | ---- | ---------- |
-| v1.2.3 | 2025-07-26 | Auto-save settings, fix self-contained launch |
-| v1.2.2 | 2025-07-22 | Fix click timing drift, English release filenames |
-| v1.2.1 | 2025-07-07 | Cursorless clicking (PostClickAt), installer |
-| v1.2.0 | 2025-07-06 | Multi-key triggers, scheduled tasks |
-| v1.1.0 | 2025-06-21 | Macro recording/playback, single key trigger |
-| v1.0.0 | 2025-05-22 | Core clicking, tray, settings, F6-F10 hotkeys |
+| v1.2.3 | 2026-07-26 | Auto-save settings, fix self-contained launch |
+| v1.2.2 | 2026-07-22 | Fix click timing drift, English release filenames |
+| v1.2.1 | 2026-07-07 | Cursorless clicking (PostClickAt), installer |
+| v1.2.0 | 2026-07-06 | Multi-key triggers, scheduled tasks |
+| v1.1.0 | 2026-06-21 | Macro recording/playback, single key trigger |
+| v1.0.0 | 2026-05-22 | Core clicking, tray, settings, F6-F10 hotkeys |
 
 Full changelog: [CHANGELOG.md](CHANGELOG.md)
 
