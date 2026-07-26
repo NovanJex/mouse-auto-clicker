@@ -2,7 +2,7 @@
 ; 框架依赖 + LZMA2 极限压缩 + 自动安装 .NET 运行时
 
 #define MyAppName "鼠标连点器"
-#define MyAppVersion "1.2.2"
+#define MyAppVersion "1.2.3"
 #define MyAppPublisher "AutoClicker"
 #define MyAppExeName "鼠标连点器.exe"
 

@@ -32,6 +32,7 @@ public partial class MainViewModel : ObservableObject
 
     private CancellationTokenSource? _appCts;
     private CancellationTokenSource? _loopCts;
+    private CancellationTokenSource? _saveDebounceCts;
     private RecordingSession? _currentRecording;
     private bool _isPickingCoordinate;
     private static readonly string RecordingPath = Path.Combine(
@@ -135,6 +136,16 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private int _selectedTimeUnitIndex; // 0=秒, 1=分钟, 2=小时
+
+    // ── 设置属性变更自动保存（防抖 500ms） ──
+    partial void OnUseFixedPositionChanged(bool value) => DebouncedSaveSettings();
+    partial void OnTargetXChanged(int value) => DebouncedSaveSettings();
+    partial void OnTargetYChanged(int value) => DebouncedSaveSettings();
+
+    partial void OnIntervalMsChanged(int value) => DebouncedSaveSettings();
+    partial void OnCpsChanged(int value) => DebouncedSaveSettings();
+    partial void OnHoldDurationMsChanged(int value) => DebouncedSaveSettings();
+    partial void OnRepeatCountChanged(int value) => DebouncedSaveSettings();
 
     /// <summary>时间单位选项列表（中文显示）</summary>
     public static List<string> TimeUnitOptions => new() { "秒", "分钟", "小时" };
@@ -391,6 +402,7 @@ public partial class MainViewModel : ObservableObject
                 _keyboardTriggerService.SetBindings(list);
                 OnPropertyChanged(nameof(TriggerBindings));
                 OnPropertyChanged(nameof(TriggerKeyDisplay));
+                DebouncedSaveSettings();
             }
         }
         finally
@@ -416,6 +428,7 @@ public partial class MainViewModel : ObservableObject
         _keyboardTriggerService.SetBindings(list);
         OnPropertyChanged(nameof(TriggerBindings));
         OnPropertyChanged(nameof(TriggerKeyDisplay));
+        DebouncedSaveSettings();
     }
 
     // ── 定时任务命令 ──
@@ -437,6 +450,8 @@ public partial class MainViewModel : ObservableObject
         // 清空输入
         NewTaskLabel = "";
         NewTaskDelayValue = 0;
+
+        DebouncedSaveSettings();
     }
 
     /// <summary>获取当前所选时间单位的秒数换算倍率</summary>
@@ -452,6 +467,7 @@ public partial class MainViewModel : ObservableObject
     private void RemoveScheduledTask(ScheduledClickTask task)
     {
         _scheduledTaskService.Tasks.Remove(task);
+        DebouncedSaveSettings();
     }
 
     /// <summary>开始执行定时任务</summary>
@@ -555,6 +571,7 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedClickModeChanged(ClickMode value)
     {
         OnPropertyChanged(nameof(SelectedClickModeDisplay));
+        DebouncedSaveSettings();
     }
 
     // ── 间隔模式变化时通知衍生属性 ──
@@ -564,6 +581,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsMsMode));
         OnPropertyChanged(nameof(IsCpsMode));
         OnPropertyChanged(nameof(IsHoldMode));
+        DebouncedSaveSettings();
     }
 
     // ── 键盘触发属性变化时同步到服务 ──
@@ -574,6 +592,7 @@ public partial class MainViewModel : ObservableObject
             _keyboardTriggerService.Enable();
         else
             _keyboardTriggerService.Disable();
+        DebouncedSaveSettings();
     }
 
     partial void OnNewTaskDelayValueChanged(int value)
@@ -837,6 +856,19 @@ public partial class MainViewModel : ObservableObject
     {
         IsScheduledRunning = false;
         ScheduledStatusText = "已停止";
+    }
+
+    /// <summary>防抖保存 — 设置变更 500ms 后自动写入磁盘，频繁修改只写一次</summary>
+    private void DebouncedSaveSettings()
+    {
+        _saveDebounceCts?.Cancel();
+        _saveDebounceCts = new CancellationTokenSource();
+        var token = _saveDebounceCts.Token;
+        _ = Task.Delay(500, token).ContinueWith(_ =>
+        {
+            if (!token.IsCancellationRequested)
+                Application.Current.Dispatcher.Invoke(SaveSettings);
+        }, TaskContinuationOptions.NotOnCanceled);
     }
 
     /// <summary>将当前设置保存到持久化文件</summary>
