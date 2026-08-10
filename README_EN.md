@@ -157,3 +157,5 @@ This project is licensed under the [MIT License](LICENSE) — free to use, modif
 ## ⭐ Star History
 
 If you find this project useful, please give it a star ⭐ to support it!
+
+[![Star History Chart](https://api.star-history.com/chart?repos=NovanJex/mouse-auto-clicker&type=date&legend=top-left&sealed_token=MJ66g8sESboWT3JvEMBJgeAEmsePLJbB7sWTdA9Illg6dPvB-JX1agP_3veX0F_Pwl6WX9nnUjiiwkDp0KEltUw5kkzlQxhPBF6xPeb3sRSOesd2P6iDJP_7MkN4wNObhV2AYoa_tIQgwokWGtv5164ErWQ4h2U2Nu7gkhDarFnNzl32eFLneWcrLh7A)](https://www.star-history.com/?repos=NovanJex%2Fmouse-auto-clicker&type=date&legend=top-left)
