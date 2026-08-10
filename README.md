@@ -182,4 +182,4 @@ ISCC.exe installer.iss
 
 如果你觉得这个项目有用，请给一个 Star ⭐ 支持一下！
 
-[![Star History Chart](https://api.star-history.com/svg?repos=NovanJex/mouse-auto-clicker&type=Date)](https://star-history.com/#NovanJex/mouse-auto-clicker&Date)
+[![Star History Chart](https://api.star-history.com/chart?repos=NovanJex/mouse-auto-clicker&type=date&legend=top-left&sealed_token=6Vdw4KxE4PsUBTHgfwnEpHp-YOxM2UYuO2EJSsC0YWg1Dyp2xYvgvyTTgaNyqaWYn2yZR--jqHpm69L6SAV-tjSjg6nrDyhKmOzvLZax-RjWARhvM3PbkgOOL_7dKRk0j_FkJkUnXD8g-THo0N-GfDJSPXHvvJ-1ScuH_niGg9fcBkh7isjB6pHBK9Uw)](https://www.star-history.com/?type=date&repos=NovanJex%2Fmouse-auto-clicker)
