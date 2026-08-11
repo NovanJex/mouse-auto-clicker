@@ -1,4 +1,4 @@
-name: 自动发布 Release
+name: .NET 8 WPF Build & Publish
 
 # 触发条件：
 # 1. 推送 v* 格式的标签（如 v1.2.3）→ 自动构建并创建 Release
@@ -15,21 +15,20 @@ on:
         type: string
 
 jobs:
-  release:
+  build-and-publish:
     runs-on: windows-latest
     permissions:
       contents: write   # 需要创建 Release 和上传资产
     steps:
       # 1. 检出代码（tag 触发时自动检出对应 commit）
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # 2. 安装 .NET 8 SDK（与 global.json 锁定的 8.0.421 匹配）
       - name: 安装 .NET 8 SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.421'
-          dotnet-quality: 'ga'
 
       # 3. 安装 Inno Setup（构建安装包）
       - name: 安装 Inno Setup
@@ -37,7 +36,16 @@ jobs:
         run: |
           choco install innosetup --yes --no-progress
 
-      # 4. 解析版本号：tag 触发从标签解析，手动触发从输入读取
+      # 4. 下载中文语言文件（choco 安装的 Inno Setup 不含 ChineseSimplified.isl）
+      - name: 下载中文语言文件
+        shell: pwsh
+        run: |
+          $langDir = "C:\Program Files (x86)\Inno Setup 6\Languages"
+          New-Item -ItemType Directory -Path $langDir -Force | Out-Null
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/ChineseSimplified.isl" -OutFile "$langDir\ChineseSimplified.isl"
+          Write-Host "ChineseSimplified.isl 下载完成"
+
+      # 5. 解析版本号：tag 触发从标签解析，手动触发从输入读取
       - name: 解析版本号
         id: version
         shell: pwsh
@@ -56,34 +64,34 @@ jobs:
           }
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-      # 5. 构建框架依赖版（安装包内嵌使用）
+      # 6. 构建框架依赖版（安装包内嵌使用）
       - name: 构建框架依赖版
         shell: pwsh
         run: |
           dotnet publish src/AutoClicker.App/AutoClicker.App.csproj -c Release -o ./publish/installer-src
 
-      # 6. 构建自包含单文件版
+      # 7. 构建自包含单文件版
       #    IncludeAllContentForSelfExtract 已在 csproj 中配置，解决 WPF 原生 DLL 加载问题
       - name: 构建自包含单文件版
         shell: pwsh
         run: |
           dotnet publish src/AutoClicker.App/AutoClicker.App.csproj -c Release -o ./publish/sc -p:SelfContained=true
 
-      # 7. 重命名自包含产物为英文文件名
+      # 8. 重命名自包含产物为英文文件名
       - name: 重命名自包含产物
         shell: pwsh
         run: |
           $version = "${{ steps.version.outputs.version }}"
           Move-Item -Path ./publish/sc/鼠标连点器.exe -Destination "./publish/MouseAutoClicker_v$version.exe" -Force
 
-      # 8. 构建 Inno Setup 安装包（/D 动态覆盖版本号，与 tag 保持一致）
+      # 9. 构建 Inno Setup 安装包（/D 动态覆盖版本号，与 tag 保持一致）
       - name: 构建安装包
         shell: pwsh
         run: |
           $version = "${{ steps.version.outputs.version }}"
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" installer.iss
 
-      # 9. 验证产物存在
+      # 10. 验证产物存在
       - name: 验证产物
         shell: pwsh
         run: |
@@ -91,7 +99,7 @@ jobs:
           Get-ChildItem "./publish/MouseAutoClicker_v$version.exe" | Select-Object Name, @{N='SizeMB';E={[math]::Round($_.Length/1MB,1)}}
           Get-ChildItem "./dist/MouseAutoClicker_Setup_v$version.exe" | Select-Object Name, @{N='SizeMB';E={[math]::Round($_.Length/1MB,1)}}
 
-      # 10. 从 CHANGELOG.md 提取当前版本更新内容作为 Release 描述
+      # 11. 从 CHANGELOG.md 提取当前版本更新内容作为 Release 描述
       - name: 提取更新日志
         id: changelog
         shell: pwsh
@@ -107,7 +115,7 @@ jobs:
           # 保存到文件避免超长 env 变量问题
           $section | Out-File -FilePath ./release-notes.txt -Encoding UTF8
 
-      # 11. 创建 GitHub Release 并上传资产（中文描述）
+      # 12. 创建 GitHub Release 并上传资产（中文描述）
       - name: 创建 Release
         shell: pwsh
         env:
