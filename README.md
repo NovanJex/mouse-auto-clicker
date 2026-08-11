@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.2.3-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.2.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/.NET-8.0-purple" alt=".NET">
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
@@ -30,8 +30,8 @@ Windows PC 端鼠标自动连点器，支持自定义坐标点击、鼠标宏录
 
 | 文件 | 类型 | 大小 |
 | ---- | ---- | ---- |
-| `MouseAutoClicker_v1.2.3.exe` | 自包含单文件（无需安装运行时，双击即用） | ~155 MB |
-| `MouseAutoClicker_Setup_v1.2.3.exe` | Inno Setup 安装包（自动安装 .NET 8 运行时） | ~2.3 MB |
+| `MouseAutoClicker_v1.2.4.exe` | 自包含单文件（无需安装运行时，双击即用） | ~155 MB |
+| `MouseAutoClicker_Setup_v1.2.4.exe` | Inno Setup 安装包（自动安装 .NET 8 运行时） | ~2.3 MB |
 
 > **推荐**: 首次使用请下载 **安装包**（`Setup_`），自动检测并安装 .NET 8 Desktop Runtime。
 
@@ -46,7 +46,7 @@ Windows PC 端鼠标自动连点器，支持自定义坐标点击、鼠标宏录
 - **高精度定时**：<15ms 用 SpinWait 自旋，>=15ms 用 Task.Delay 异步
 - **多显示器支持**：0~65535 归一化坐标映射虚拟桌面
 
-### 多键位绑定触发（v1.2.0 新增）
+### 多键位绑定触发
 
 - **多键位→多位置**：不同键盘按键绑定到不同屏幕坐标 + 不同点击模式
 - **绑定管理弹窗**：TriggerBindListView 弹出窗口集中管理所有绑定，支持增删
@@ -55,7 +55,7 @@ Windows PC 端鼠标自动连点器，支持自定义坐标点击、鼠标宏录
 - **全局生效**：基于 `WH_KEYBOARD_LL` 底层键盘钩子，后台也能触发
 - **防误触保护**：坐标选取覆盖层弹出时自动抑制触发；自动过滤注入事件和重复按下
 
-### 定时点击任务（v1.2.0 新增）
+### 定时点击任务
 
 - **命名任务**：为每个定时任务设置标签，方便识别
 - **灵活定时**：支持秒/分/小时三种时间单位
@@ -159,6 +159,7 @@ ISCC.exe installer.iss
 
 | 版本 | 日期 | 主要变更 |
 | ---- | ---- | -------- |
+| v1.2.4 | 2026-08-11 | 修复绑定列表/任务列表弹窗闪退、新增 GitHub Actions 自动发布 |
 | v1.2.3 | 2026-07-26 | 设置即时自动保存、修复自包含单文件启动崩溃 |
 | v1.2.2 | 2026-07-22 | 修复定时漂移（越跑越快）、英文文件名、构建优化 |
 | v1.2.1 | 2026-07-07 | 无光标点击（PostClickAt）、Inno Setup 安装包 |

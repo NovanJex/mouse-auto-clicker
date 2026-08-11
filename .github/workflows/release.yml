@@ -1,0 +1,150 @@
+name: 自动发布 Release
+
+# 触发条件：
+# 1. 推送 v* 格式的标签（如 v1.2.3）→ 自动构建并创建 Release
+# 2. 手动触发（Actions 页面点 Run workflow，需填写版本号）
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（如 1.2.4，仅手动触发时使用）'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write   # 需要创建 Release 和上传资产
+    steps:
+      # 1. 检出代码（tag 触发时自动检出对应 commit）
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 2. 安装 .NET 8 SDK（与 global.json 锁定的 8.0.421 匹配）
+      - name: 安装 .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.421'
+          dotnet-quality: 'ga'
+
+      # 3. 安装 Inno Setup（构建安装包）
+      - name: 安装 Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --yes --no-progress
+
+      # 4. 解析版本号：tag 触发从标签解析，手动触发从输入读取
+      - name: 解析版本号
+        id: version
+        shell: pwsh
+        run: |
+          $version = ""
+          if ("${{ github.event_name }}" -eq "push") {
+            if ("${{ github.ref_name }}" -match '^v(\d+\.\d+\.\d+)$') {
+              $version = $Matches[1]
+            }
+          } else {
+            $version = "${{ inputs.version }}".Trim()
+          }
+          if (-not $version) {
+            Write-Error "无法解析版本号"
+            exit 1
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      # 5. 构建框架依赖版（安装包内嵌使用）
+      - name: 构建框架依赖版
+        shell: pwsh
+        run: |
+          dotnet publish src/AutoClicker.App/AutoClicker.App.csproj -c Release -o ./publish/installer-src
+
+      # 6. 构建自包含单文件版
+      #    IncludeAllContentForSelfExtract 已在 csproj 中配置，解决 WPF 原生 DLL 加载问题
+      - name: 构建自包含单文件版
+        shell: pwsh
+        run: |
+          dotnet publish src/AutoClicker.App/AutoClicker.App.csproj -c Release -o ./publish/sc -p:SelfContained=true
+
+      # 7. 重命名自包含产物为英文文件名
+      - name: 重命名自包含产物
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          Move-Item -Path ./publish/sc/鼠标连点器.exe -Destination "./publish/MouseAutoClicker_v$version.exe" -Force
+
+      # 8. 构建 Inno Setup 安装包（/D 动态覆盖版本号，与 tag 保持一致）
+      - name: 构建安装包
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" installer.iss
+
+      # 9. 验证产物存在
+      - name: 验证产物
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          Get-ChildItem "./publish/MouseAutoClicker_v$version.exe" | Select-Object Name, @{N='SizeMB';E={[math]::Round($_.Length/1MB,1)}}
+          Get-ChildItem "./dist/MouseAutoClicker_Setup_v$version.exe" | Select-Object Name, @{N='SizeMB';E={[math]::Round($_.Length/1MB,1)}}
+
+      # 10. 从 CHANGELOG.md 提取当前版本更新内容作为 Release 描述
+      - name: 提取更新日志
+        id: changelog
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $content = Get-Content ./CHANGELOG.md -Raw -Encoding UTF8
+          $pattern = "## \[v$version\](.*?)(?=## \[v|\z)"
+          if ($content -match $pattern) {
+            $section = $Matches[1].Trim()
+          } else {
+            $section = "- 详细更新内容请查看 CHANGELOG.md"
+          }
+          # 保存到文件避免超长 env 变量问题
+          $section | Out-File -FilePath ./release-notes.txt -Encoding UTF8
+
+      # 11. 创建 GitHub Release 并上传资产（中文描述）
+      - name: 创建 Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $tag = "v$version"
+          $exePath = "./publish/MouseAutoClicker_v$version.exe"
+          $setupPath = "./dist/MouseAutoClicker_Setup_v$version.exe"
+          $exeSize = [math]::Round((Get-Item $exePath).Length/1MB, 1)
+          $setupSize = [math]::Round((Get-Item $setupPath).Length/1MB, 1)
+          $notes = Get-Content ./release-notes.txt -Raw -Encoding UTF8
+
+          $body = @"
+## 更新内容
+
+$notes
+
+## 下载
+
+| 文件 | 类型 | 大小 |
+| ---- | ---- | ---- |
+| ``MouseAutoClicker_v$version.exe`` | 自包含单文件（无需安装运行时，双击即用） | ~$exeSize MB |
+| ``MouseAutoClicker_Setup_v$version.exe`` | Inno Setup 安装包（自动安装 .NET 8 运行时） | ~$setupSize MB |
+
+> **推荐**：首次使用请下载 **安装包**（``Setup_``），自动检测并安装 .NET 8 Desktop Runtime。
+
+## 系统要求
+
+- Windows 10/11 x64
+- .NET 8 Desktop Runtime（安装包会自动处理）
+"@
+
+          # 创建 Release（tag 不存在时 gh 会自动创建；已存在时 --notes 会覆盖描述）
+          gh release create "$tag" `
+            "$exePath" `
+            "$setupPath" `
+            --title "鼠标连点器 v$version" `
+            --notes $body `
+            --repo "${{ github.repository }}"

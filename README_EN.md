@@ -5,7 +5,7 @@
 <h1 align="center">MouseAutoClicker (鼠标连点器)</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.2.3-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.2.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/.NET-8.0-purple" alt=".NET">
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
@@ -30,8 +30,8 @@ Go to [Releases](https://github.com/NovanJex/mouse-auto-clicker/releases) to dow
 
 | File | Type | Size |
 | ---- | ---- | ---- |
-| `MouseAutoClicker_v1.2.3.exe` | Self-contained (no runtime needed) | ~155 MB |
-| `MouseAutoClicker_Setup_v1.2.3.exe` | Inno Setup installer (auto-installs .NET 8) | ~2.3 MB |
+| `MouseAutoClicker_v1.2.4.exe` | Self-contained (no runtime needed) | ~155 MB |
+| `MouseAutoClicker_Setup_v1.2.4.exe` | Inno Setup installer (auto-installs .NET 8) | ~2.3 MB |
 
 > **Recommended**: First-time users should use the **installer** (`Setup_`), which automatically detects and installs .NET 8 Desktop Runtime.
 
@@ -135,6 +135,7 @@ ISCC.exe installer.iss
 
 | Version | Date | Highlights |
 | ------- | ---- | ---------- |
+| v1.2.4 | 2026-08-11 | Fix binding list crash, GitHub Actions auto-release |
 | v1.2.3 | 2026-07-26 | Auto-save settings, fix self-contained launch |
 | v1.2.2 | 2026-07-22 | Fix click timing drift, English release filenames |
 | v1.2.1 | 2026-07-07 | Cursorless clicking (PostClickAt), installer |

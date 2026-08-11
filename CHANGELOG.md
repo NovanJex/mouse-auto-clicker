@@ -2,6 +2,15 @@
 
 本文档记录鼠标连点器所有重要变更。
 
+## [v1.2.4] - 2026-08-11
+
+### 修复
+- **修复点击"绑定列表"弹窗闪退**：`RelativeSource AncestorType` 裸字符串类型解析导致 `System.Windows.Controls.Ribbon` 程序集加载失败（`XamlParseException`），改用 `{x:Type Window}` 完整限定语法，在自包含单文件发布模式下正常加载
+- **修复"任务列表"弹窗同样隐患**：同一问题同步修复，避免同类闪退
+
+### 改进
+- **新增 GitHub Actions 自动发布**：推送 `v*` 标签自动构建框架依赖版 + 自包含单文件版 + Inno Setup 安装包，并自动创建中文 Release 上传产物
+
 ## [v1.2.3] - 2026-07-26
 
 ### 新增

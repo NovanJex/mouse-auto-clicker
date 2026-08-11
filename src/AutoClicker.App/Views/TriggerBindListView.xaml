@@ -48,7 +48,7 @@
                                         Padding="0" FontSize="11"
                                         Style="{StaticResource ButtonSecondary}"
                                         Command="{Binding DataContext.RemoveTriggerBindingCommand,
-                                                  RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                         CommandParameter="{Binding}"/>
                             </Grid>
                         </Border>
