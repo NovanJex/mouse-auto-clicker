@@ -121,25 +121,26 @@ jobs:
           $setupSize = [math]::Round((Get-Item $setupPath).Length/1MB, 1)
           $notes = Get-Content ./release-notes.txt -Raw -Encoding UTF8
 
-          $body = @"
-## 更新内容
-
-$notes
-
-## 下载
-
-| 文件 | 类型 | 大小 |
-| ---- | ---- | ---- |
-| ``MouseAutoClicker_v$version.exe`` | 自包含单文件（无需安装运行时，双击即用） | ~$exeSize MB |
-| ``MouseAutoClicker_Setup_v$version.exe`` | Inno Setup 安装包（自动安装 .NET 8 运行时） | ~$setupSize MB |
-
-> **推荐**：首次使用请下载 **安装包**（``Setup_``），自动检测并安装 .NET 8 Desktop Runtime。
-
-## 系统要求
-
-- Windows 10/11 x64
-- .NET 8 Desktop Runtime（安装包会自动处理）
-"@
+          # 使用字符串数组构建描述（避免 here-string 与 YAML 缩进冲突）
+          $body = @(
+            "## 更新内容",
+            "",
+            $notes,
+            "",
+            "## 下载",
+            "",
+            "| 文件 | 类型 | 大小 |",
+            "| ---- | ---- | ---- |",
+            "| ``MouseAutoClicker_v$version.exe`` | 自包含单文件（无需安装运行时，双击即用） | ~$exeSize MB |",
+            "| ``MouseAutoClicker_Setup_v$version.exe`` | Inno Setup 安装包（自动安装 .NET 8 运行时） | ~$setupSize MB |",
+            "",
+            "> **推荐**：首次使用请下载 **安装包**（``Setup_``），自动检测并安装 .NET 8 Desktop Runtime。",
+            "",
+            "## 系统要求",
+            "",
+            "- Windows 10/11 x64",
+            "- .NET 8 Desktop Runtime（安装包会自动处理）"
+          ) -join "`n"
 
           # 创建 Release（tag 不存在时 gh 会自动创建；已存在时 --notes 会覆盖描述）
           gh release create "$tag" `
