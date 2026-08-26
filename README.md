@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.2.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.2.5-blue" alt="Version">
   <img src="https://img.shields.io/badge/.NET-8.0-purple" alt=".NET">
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
@@ -30,8 +30,8 @@ Windows PC 端鼠标自动连点器，支持自定义坐标点击、鼠标宏录
 
 | 文件 | 类型 | 大小 |
 | ---- | ---- | ---- |
-| `MouseAutoClicker_v1.2.4.exe` | 自包含单文件（无需安装运行时，双击即用） | ~155 MB |
-| `MouseAutoClicker_Setup_v1.2.4.exe` | Inno Setup 安装包（自动安装 .NET 8 运行时） | ~2.3 MB |
+| `MouseAutoClicker_v1.2.5.exe` | 自包含单文件（无需安装运行时，双击即用） | ~155 MB |
+| `MouseAutoClicker_Setup_v1.2.5.exe` | Inno Setup 安装包（自动安装 .NET 8 运行时） | ~2.3 MB |
 
 > **推荐**: 首次使用请下载 **安装包**（`Setup_`），自动检测并安装 .NET 8 Desktop Runtime。
 
@@ -159,6 +159,7 @@ ISCC.exe installer.iss
 
 | 版本 | 日期 | 主要变更 |
 | ---- | ---- | -------- |
+| v1.2.5 | 2026-08-16 | F6 切换启停、托盘快捷菜单、窗口位置记忆、稳定性提升 |
 | v1.2.4 | 2026-08-11 | 修复绑定列表/任务列表弹窗闪退、新增 GitHub Actions 自动发布 |
 | v1.2.3 | 2026-07-26 | 设置即时自动保存、修复自包含单文件启动崩溃 |
 | v1.2.2 | 2026-07-22 | 修复定时漂移（越跑越快）、英文文件名、构建优化 |
