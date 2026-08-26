@@ -89,7 +89,11 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" installer.iss
+          # ISCC 的 /D 参数无法可靠覆盖 #define 版本号，改为直接替换脚本中的版本号
+          $content = Get-Content ./installer.iss -Raw -Encoding UTF8
+          $content = $content -replace '#define MyAppVersion "[^"]*"', "#define MyAppVersion `"$version`""
+          $content | Out-File ./installer.iss -Encoding UTF8
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
 
       # 10. 验证产物存在
       - name: 验证产物

@@ -1,8 +1,8 @@
-; 鼠标连点器 — Inno Setup 安装脚本
+﻿; 鼠标连点器 — Inno Setup 安装脚本
 ; 框架依赖 + LZMA2 极限压缩 + 自动安装 .NET 运行时
 
 #define MyAppName "鼠标连点器"
-#define MyAppVersion "1.2.4"
+#define MyAppVersion "1.2.5"
 #define MyAppPublisher "AutoClicker"
 #define MyAppExeName "鼠标连点器.exe"
 
@@ -177,3 +177,4 @@ begin
   else
     Result := True;
 end;
+
