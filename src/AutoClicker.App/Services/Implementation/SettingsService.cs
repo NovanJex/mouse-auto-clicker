@@ -16,6 +16,9 @@ public class SettingsService : ISettingsService
         "AutoClicker",
         "settings.json");
 
+    /// <summary>设置备份文件路径（主文件损坏时用于恢复）</summary>
+    private static readonly string BackupPath = SettingsPath + ".bak";
+
     /// <inheritdoc />
     public AppSettings Settings { get; private set; } = new();
 
@@ -25,6 +28,10 @@ public class SettingsService : ISettingsService
         var dir = Path.GetDirectoryName(SettingsPath);
         if (dir is not null)
             Directory.CreateDirectory(dir);
+
+        // 保存前先备份旧文件（防止新文件写入失败/损坏时丢失配置）
+        if (File.Exists(SettingsPath))
+            File.Copy(SettingsPath, BackupPath, overwrite: true);
 
         var json = JsonSerializer.Serialize(Settings, AppJsonSerializerContext.Default.AppSettings);
         File.WriteAllText(SettingsPath, json);
@@ -45,7 +52,23 @@ public class SettingsService : ISettingsService
         }
         catch
         {
-            // JSON 损坏或格式变更时使用默认配置
+            // 主文件损坏时尝试从备份恢复
+            if (File.Exists(BackupPath))
+            {
+                try
+                {
+                    var backupJson = File.ReadAllText(BackupPath);
+                    var loaded = JsonSerializer.Deserialize(backupJson, AppJsonSerializerContext.Default.AppSettings);
+                    if (loaded is not null)
+                    {
+                        Settings = loaded;
+                        return;
+                    }
+                }
+                catch { }
+            }
+
+            // 备份也失败时使用默认配置
             Settings = new AppSettings();
         }
     }

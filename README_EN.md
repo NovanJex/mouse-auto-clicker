@@ -83,8 +83,8 @@ Go to [Releases](https://github.com/NovanJex/mouse-auto-clicker/releases) to dow
 
 | Key | Action |
 |-----|--------|
-| `F6` | Start / Stop auto-clicking |
-| `F7` | Reserved |
+| `F6` | Start / Stop auto-clicking (toggle) |
+| `F7` | Emergency stop (only while running) |
 | `F8` | Start/Stop macro recording |
 | `F9` | Play recording (once) / Stop playback |
 | `F10` | Loop playback / Stop loop |

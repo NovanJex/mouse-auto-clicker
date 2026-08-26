@@ -43,6 +43,19 @@ public partial class App : Application
         _mainWindow.StateChanged += OnMainWindowStateChanged;
         _mainWindow.Closing += OnMainWindowClosing;
 
+        // 恢复上次窗口位置/大小（有保存值时）
+        var settings = _serviceProvider.GetService<ISettingsService>();
+        if (settings?.Settings is { } s)
+        {
+            if (s.WindowLeft is double l && s.WindowTop is double t)
+            {
+                _mainWindow.Left = l;
+                _mainWindow.Top = t;
+            }
+            if (s.WindowWidth is double w && w >= 580) _mainWindow.Width = w;
+            if (s.WindowHeight is double h && h >= 500) _mainWindow.Height = h;
+        }
+
         // 先显示窗口，确保 HWND 句柄已创建
         _mainWindow.Show();
 
@@ -77,15 +90,41 @@ public partial class App : Application
         _mainWindow.Activate();
     }
 
+    /// <summary>保存窗口位置/大小到设置（关闭时调用，随设置持久化）</summary>
+    private void SaveWindowPosition(ISettingsService? settings)
+    {
+        if (settings is null || _mainWindow is null) return;
+        // 最大化时不保存位置（恢复时用默认居中）
+        if (_mainWindow.WindowState == WindowState.Maximized) return;
+
+        settings.Settings.WindowLeft = _mainWindow.Left;
+        settings.Settings.WindowTop = _mainWindow.Top;
+        settings.Settings.WindowWidth = _mainWindow.Width;
+        settings.Settings.WindowHeight = _mainWindow.Height;
+    }
+
     /// <summary>显示托盘右键菜单</summary>
     private void ShowTrayContextMenu()
     {
+        var vm = _serviceProvider?.GetService<MainViewModel>();
         var menu = new ContextMenu();
+
         menu.Items.Add(new MenuItem
         {
             Header = "显示窗口",
             Command = new CommunityToolkit.Mvvm.Input.RelayCommand(RestoreWindow)
         });
+
+        // 开始/停止连点快捷项（动态标题跟随运行状态）
+        if (vm is not null)
+        {
+            menu.Items.Add(new MenuItem
+            {
+                Header = vm.IsRunning ? "停止连点" : "开始连点",
+                Command = vm.ToggleClickingCommand
+            });
+        }
+
         menu.Items.Add(new Separator());
         menu.Items.Add(new MenuItem
         {
@@ -112,6 +151,9 @@ public partial class App : Application
 
         var vm = _serviceProvider?.GetService<MainViewModel>();
         var settings = _serviceProvider?.GetService<ISettingsService>();
+
+        // 记住窗口位置/大小
+        SaveWindowPosition(settings);
 
         // 如果已勾选"记住选择"，直接执行不弹窗
         if (settings?.Settings.RememberCloseChoice == true)

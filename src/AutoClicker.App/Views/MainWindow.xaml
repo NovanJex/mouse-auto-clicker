@@ -230,7 +230,7 @@
                                         <Setter Property="Background" Value="{StaticResource ColorSuccess}"/><Setter Property="Content" Value="开始 (F6)"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                        <Setter Property="Background" Value="{StaticResource ColorDanger}"/><Setter Property="Content" Value="停止 (F7)"/>
+                                        <Setter Property="Background" Value="{StaticResource ColorDanger}"/><Setter Property="Content" Value="停止 (F6)"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -251,7 +251,7 @@
                     <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" FontSize="12"/>
                 </StackPanel>
                 <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center"
-                           Text="快捷键: F6 开始  |  F7 停止  |  F8 录制  |  F9 播放  |  F10 循环"
+                           Text="快捷键: F6 开始/停止  |  F7 急停  |  F8 录制  |  F9 播放  |  F10 循环"
                            FontSize="11" Foreground="{StaticResource ColorTextMuted}"/>
             </Grid>
         </Border>

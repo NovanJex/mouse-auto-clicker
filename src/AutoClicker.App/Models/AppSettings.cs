@@ -38,4 +38,10 @@ public class AppSettings
 
     /// <summary>定时点击任务列表</summary>
     public List<ScheduledClickTask> ScheduledTasks { get; set; } = new();
+
+    /// <summary>窗口位置记忆（可空，null = 使用默认居中）</summary>
+    public double? WindowLeft { get; set; }
+    public double? WindowTop { get; set; }
+    public double? WindowWidth { get; set; }
+    public double? WindowHeight { get; set; }
 }

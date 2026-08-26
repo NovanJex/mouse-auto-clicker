@@ -9,7 +9,9 @@ public interface IMouseRecordingService
 {
     bool IsRecording { get; }
     event EventHandler<RecordedMouseEvent>? EventCaptured;
-    event EventHandler? RecordingStopped;
+
+    /// <summary>录制停止事件（手动或达到上限自动停止），携带录制会话</summary>
+    event EventHandler<RecordingSession?>? RecordingStopped;
     void StartRecording();
     RecordingSession? StopRecording();
 }

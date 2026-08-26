@@ -18,9 +18,12 @@ public class MouseRecordingService : IMouseRecordingService, IDisposable
     private Stopwatch? _stopwatch;
     private bool _disposed;
 
+    /// <summary>录制事件数上限（达到后自动停止，防止内存/文件无限增长）</summary>
+    private const int MaxRecordedEvents = 5000;
+
     public bool IsRecording { get; private set; }
     public event EventHandler<RecordedMouseEvent>? EventCaptured;
-    public event EventHandler? RecordingStopped;
+    public event EventHandler<RecordingSession?>? RecordingStopped;
 
     public void StartRecording()
     {
@@ -64,6 +67,10 @@ public class MouseRecordingService : IMouseRecordingService, IDisposable
 
                     EventCaptured?.Invoke(this, recordEvent);
                     _session?.Events.Add(recordEvent);
+
+                    // 达到事件数上限自动停止，防止内存/文件无限增长
+                    if (_session is not null && _session.Events.Count >= MaxRecordedEvents)
+                        StopRecording();
                 }
             }
         }
@@ -90,7 +97,7 @@ public class MouseRecordingService : IMouseRecordingService, IDisposable
 
         var result = _session;
         _session = null;
-        RecordingStopped?.Invoke(this, EventArgs.Empty);
+        RecordingStopped?.Invoke(this, result);
         return result;
     }
 

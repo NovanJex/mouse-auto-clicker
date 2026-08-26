@@ -35,6 +35,7 @@ public partial class MainViewModel : ObservableObject
     private CancellationTokenSource? _saveDebounceCts;
     private RecordingSession? _currentRecording;
     private bool _isPickingCoordinate;
+    private Window? _keepAliveWindow;   // 保持子窗口引用，防止 GC 回收导致窗口异常
     private static readonly string RecordingPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "AutoClicker", "recording.json");
@@ -212,6 +213,7 @@ public partial class MainViewModel : ObservableObject
         LoadRecording();
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
         _recordingService.EventCaptured += OnEventCaptured;
+        _recordingService.RecordingStopped += OnRecordingStopped;
         _playerService.PlaybackCompleted += OnPlaybackCompleted;
         _keyboardTriggerService.TriggerKeyPressed += OnTriggerKeyPressed;
         _scheduledTaskService.TaskStarted += OnScheduledTaskStarted;
@@ -260,16 +262,9 @@ public partial class MainViewModel : ObservableObject
 
         if (_recordingService.IsRecording)
         {
-            _currentRecording = _recordingService.StopRecording();
+            // 状态同步、会话保存由 RecordingStopped 事件统一处理（OnRecordingStopped）
+            _recordingService.StopRecording();
             IsRecording = false;
-
-            if (_currentRecording is not null && _currentRecording.Events.Count > 0)
-            {
-                HasRecording = true;
-                RecordingEventCount = _currentRecording.Events.Count;
-                RecordingDuration = $"{_currentRecording.TotalDurationMs / 1000:F1} 秒";
-                SaveRecordingToFile(_currentRecording);
-            }
         }
         else
         {
@@ -309,12 +304,17 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task LoopPlayRecording()
     {
-        if (_playerService.IsPlaying)
+        // 循环播放中 → 停止循环
+        if (IsLoopPlaying)
         {
             _loopCts?.Cancel();
             _playerService.Stop();
             return;
         }
+
+        // 单次播放中 → 先停止单次播放，再启动循环
+        if (_playerService.IsPlaying)
+            _playerService.Stop();
 
         if (_currentRecording is null || _currentRecording.Events.Count == 0)
             return;
@@ -415,8 +415,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ShowTriggerBindList()
     {
-        var window = new TriggerBindListView(this) { Owner = Application.Current.MainWindow };
-        window.Show();
+        _keepAliveWindow = new TriggerBindListView(this) { Owner = Application.Current.MainWindow };
+        _keepAliveWindow.Show();
     }
 
     /// <summary>删除指定快捷键触发绑定</summary>
@@ -494,22 +494,37 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ShowPlanList()
     {
-        var window = new PlanListView(this) { Owner = Application.Current.MainWindow };
-        window.Show();
+        _keepAliveWindow = new PlanListView(this) { Owner = Application.Current.MainWindow };
+        _keepAliveWindow.Show();
     }
 
     // ── 公共 API ──
 
-    /// <summary>注册全局热键 F6（开始）和 F7（停止）</summary>
+    /// <summary>注册全局热键 F6-F10，注册失败时在状态栏提示</summary>
     public void RegisterHotkeys(IntPtr handle)
     {
         _hotkeyService.Handle = handle;
 
-        _hotkeyService.Register(new HotkeyBinding(Key.F6, ModifierKeys.None, HotkeyStartId));
-        _hotkeyService.Register(new HotkeyBinding(Key.F7, ModifierKeys.None, HotkeyStopId));
-        _hotkeyService.Register(new HotkeyBinding(Key.F8, ModifierKeys.None, HotkeyRecordId));
-        _hotkeyService.Register(new HotkeyBinding(Key.F9, ModifierKeys.None, HotkeyPlayId));
-        _hotkeyService.Register(new HotkeyBinding(Key.F10, ModifierKeys.None, HotkeyLoopPlayId));
+        var bindings = new[]
+        {
+            new HotkeyBinding(Key.F6, ModifierKeys.None, HotkeyStartId),
+            new HotkeyBinding(Key.F7, ModifierKeys.None, HotkeyStopId),
+            new HotkeyBinding(Key.F8, ModifierKeys.None, HotkeyRecordId),
+            new HotkeyBinding(Key.F9, ModifierKeys.None, HotkeyPlayId),
+            new HotkeyBinding(Key.F10, ModifierKeys.None, HotkeyLoopPlayId),
+        };
+
+        var failed = new List<string>();
+        foreach (var b in bindings)
+        {
+            if (!_hotkeyService.Register(b))
+                failed.Add(b.Key.ToString());
+        }
+
+        if (failed.Count > 0)
+        {
+            StatusText = $"热键 {string.Join(", ", failed)} 注册失败（可能被其他程序占用）";
+        }
     }
 
     /// <summary>注销所有热键</summary>
@@ -719,15 +734,17 @@ public partial class MainViewModel : ObservableObject
     /// <summary>热键按下事件处理</summary>
     private void OnHotkeyPressed(object? sender, int id)
     {
-        if (id == HotkeyStartId && !IsRunning)
-            _ = StartClickingAsync();
+        // F6：开始/停止切换（与主按钮一致）
+        if (id == HotkeyStartId)
+            _ = ToggleClicking();
+        // F7：紧急停止（仅在运行时生效）
         else if (id == HotkeyStopId && IsRunning)
             StopClicking();
         else if (id == HotkeyRecordId && !IsPlaying)
             ToggleRecording();
         else if (id == HotkeyPlayId && HasRecording && !IsRecording && !IsPlaying && !IsLoopPlaying)
             _ = PlayRecording();
-        else if (id == HotkeyLoopPlayId && HasRecording && !IsRecording && !IsPlaying)
+        else if (id == HotkeyLoopPlayId && HasRecording && !IsRecording)
             _ = LoopPlayRecording();
     }
 
@@ -803,6 +820,21 @@ public partial class MainViewModel : ObservableObject
         _recordingCount++;
         RecordingEventCount = _recordingCount;
         RecordingDuration = $"{e.TimestampMs / 1000:F1} 秒";
+    }
+
+    /// <summary>录制停止回调（手动停止或达到上限自动停止）— 同步 UI 状态并保存录制</summary>
+    private void OnRecordingStopped(object? sender, RecordingSession? session)
+    {
+        IsRecording = false;
+
+        if (session is { Events.Count: > 0 })
+        {
+            _currentRecording = session;
+            HasRecording = true;
+            RecordingEventCount = session.Events.Count;
+            RecordingDuration = $"{session.TotalDurationMs / 1000:F1} 秒";
+            SaveRecordingToFile(session);
+        }
     }
 
     /// <summary>将录制数据保存到 JSON 文件</summary>
