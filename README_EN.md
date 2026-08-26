@@ -135,7 +135,7 @@ ISCC.exe installer.iss
 
 | Version | Date | Highlights |
 | ------- | ---- | ---------- |
-| v1.2.5 | 2026-08-16 | F6 toggle start/stop, tray shortcut menu, window position, stability |
+| v1.2.5 | 2026-08-26 | F6 toggle start/stop, tray shortcut menu, window position, stability |
 | v1.2.4 | 2026-08-11 | Fix binding list crash, GitHub Actions auto-release |
 | v1.2.3 | 2026-07-26 | Auto-save settings, fix self-contained launch |
 | v1.2.2 | 2026-07-22 | Fix click timing drift, English release filenames |
