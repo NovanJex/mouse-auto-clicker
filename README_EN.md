@@ -5,7 +5,7 @@
 <h1 align="center">MouseAutoClicker (鼠标连点器)</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.2.5-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.3.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/.NET-8.0-purple" alt=".NET">
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
@@ -30,8 +30,8 @@ Go to [Releases](https://github.com/NovanJex/mouse-auto-clicker/releases) to dow
 
 | File | Type | Size |
 | ---- | ---- | ---- |
-| `MouseAutoClicker_v1.2.5.exe` | Self-contained (no runtime needed) | ~155 MB |
-| `MouseAutoClicker_Setup_v1.2.5.exe` | Inno Setup installer (auto-installs .NET 8) | ~2.3 MB |
+| `MouseAutoClicker_v1.3.0.exe` | Self-contained (no runtime needed) | ~155 MB |
+| `MouseAutoClicker_Setup_v1.3.0.exe` | Inno Setup installer (auto-installs .NET 8) | ~2.3 MB |
 
 > **Recommended**: First-time users should use the **installer** (`Setup_`), which automatically detects and installs .NET 8 Desktop Runtime.
 
@@ -42,7 +42,7 @@ Go to [Releases](https://github.com/NovanJex/mouse-auto-clicker/releases) to dow
 - **Click modes**: Left single click / Left double click / Right click / Middle (scroll wheel) click
 - **Position modes**: Follow cursor / Fixed screen coordinates (fullscreen overlay picker)
 - **Interval modes**: Milliseconds / CPS (clicks per second) / Hold duration
-- **Global hotkeys**: F6 to start, F7 to stop (system-level, works in background)
+- **Global hotkeys**: F6 to start/stop, F7 to pause/resume everything (system-level, works in background)
 - **High-precision timing**: SpinWait for <15ms, Task.Delay for >=15ms
 - **Multi-monitor support**: 0~65535 normalized coordinate mapping across virtual desktop
 
@@ -51,8 +51,13 @@ Go to [Releases](https://github.com/NovanJex/mouse-auto-clicker/releases) to dow
 - **Multiple keys → multiple targets**: Bind different keyboard keys to different screen coordinates + click modes
 - **Binding management**: TriggerBindListView popup for centralized management with add/delete
 - **Cursorless clicking**: Clicks delivered via `WindowFromPoint` + `PostMessage` directly to target window, physical cursor never moves
-- **One-click key recording**: Press "Record Key" then press a key to bind it
+- **One-click key recording**: Press "Record Key" then press a key to bind it; Esc or clicking again cancels
+- **Recording isolation**: Global F6–F10 hotkeys are ignored while recording; F6–F10 cannot be used as trigger keys
 - **Global scope**: `WH_KEYBOARD_LL` low-level keyboard hook, works while app is in background
+- **Foreground window filter**: Optional process whitelist — triggers only when the target app (e.g. a game) is in the foreground, so typing elsewhere never clicks
+- **Self-window immunity**: Pressing a bound key inside this app never triggers a click
+- **Master pause**: F7, the status banner, or the tray menu stops clicking, playback, scheduled tasks, and keyboard listening at once
+- **Starts paused**: Global listening is off on every launch by default; enable auto-resume in Trigger Settings if desired
 - **Anti-mistrigger protection**: Trigger suppressed while coordinate picker is active; injected events and auto-repeat automatically filtered
 
 ### Scheduled Click Tasks (v1.2.0)
@@ -73,23 +78,23 @@ Go to [Releases](https://github.com/NovanJex/mouse-auto-clicker/releases) to dow
 
 ### System Integration
 
-- **System tray**: Tray icon with tooltip and right-click menu (Show / Exit)
-- **Close behavior**: Confirmation dialog on close with "Exit" / "Minimize to tray" / "Remember choice"
+- **System tray**: Tray icon with state-aware tooltip and right-click menu (Show / Pause all / Start clicking / Keyboard listening / Exit)
+- **Close behavior**: Confirmation dialog on close with "Exit" / "Minimize to tray" / "Remember choice"; auto-pause when minimizing to tray (on by default, configurable in Trigger Settings)
 - **Settings persistence**: Auto-save to `%LocalAppData%/AutoClicker/settings.json` (System.Text.Json source generator, zero reflection)
 - **Single instance**: Mutex prevents multiple instances
-- **Session recovery**: Hotkeys auto-re-register after lock/sleep via SessionSwitch
+- **Session recovery**: Auto-pause on lock; hotkeys re-register after unlock via SessionSwitch
 
 ## ⌨️ Hotkeys
 
 | Key | Action |
 |-----|--------|
 | `F6` | Start / Stop auto-clicking (toggle) |
-| `F7` | Emergency stop (only while running) |
+| `F7` | Pause / Resume everything (master switch) |
 | `F8` | Start/Stop macro recording |
 | `F9` | Play recording (once) / Stop playback |
 | `F10` | Loop playback / Stop loop |
-| `ESC` | Cancel coordinate picker / Close dialog |
-| `Custom` | Keyboard trigger click (multi-key binding via popup) |
+| `ESC` | Cancel coordinate picker / Close dialog / Cancel key recording |
+| `Custom` | Keyboard trigger click (multi-key binding via popup; F6–F10 excluded) |
 
 ## 🛠️ Tech Stack
 
@@ -135,6 +140,7 @@ ISCC.exe installer.iss
 
 | Version | Date | Highlights |
 | ------- | ---- | ---------- |
+| v1.3.0 | 2026-10-24 | Master pause (F7), foreground process filter, recording isolation, starts paused |
 | v1.2.5 | 2026-08-26 | F6 toggle start/stop, tray shortcut menu, window position, stability |
 | v1.2.4 | 2026-08-11 | Fix binding list crash, GitHub Actions auto-release |
 | v1.2.3 | 2026-07-26 | Auto-save settings, fix self-contained launch |

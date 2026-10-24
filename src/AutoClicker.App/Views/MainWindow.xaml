@@ -8,11 +8,79 @@
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
+        <!-- 全局命令条 — 轻量单行：状态 + 连点 / 总暂停控制 -->
+        <Grid Grid.Row="0" Margin="16,10,16,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Ellipse Grid.Column="0" Width="10" Height="10" VerticalAlignment="Center">
+                <Ellipse.Style>
+                    <Style TargetType="Ellipse">
+                        <Setter Property="Fill" Value="{StaticResource ColorSuccess}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                                <Setter Property="Fill" Value="{StaticResource ColorDanger}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Ellipse.Style>
+            </Ellipse>
+
+            <TextBlock Grid.Column="2" Text="{Binding GlobalStateText}" FontWeight="SemiBold"
+                       VerticalAlignment="Center" ToolTip="{Binding GlobalStateHint}"/>
+
+            <Button Grid.Column="4" Width="96" Height="30" Padding="6,3" FontSize="12"
+                    IsEnabled="{Binding IsPaused, Converter={StaticResource BoolInverse}}"
+                    Command="{Binding ToggleClickingCommand}"
+                    ToolTip="开始 / 停止连点 (F6)">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsRunning}" Value="False">
+                                <Setter Property="Content" Value="开始 (F6)"/>
+                                <Setter Property="Background" Value="{StaticResource ColorSuccess}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                <Setter Property="Content" Value="停止 (F6)"/>
+                                <Setter Property="Background" Value="{StaticResource ColorDanger}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button Grid.Column="6" Content="{Binding PauseAllButtonText}"
+                    Command="{Binding TogglePauseCommand}"
+                    Width="116" Height="30" Padding="6,3" FontSize="12"
+                    ToolTip="暂停 / 恢复全部自动化 (F7)">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                                <Setter Property="Background" Value="{StaticResource ColorSuccess}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsPaused}" Value="False">
+                                <Setter Property="Background" Value="{StaticResource ColorDanger}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                       Background="{StaticResource ColorBackground}">
             <Grid Margin="16,8,16,6">
                 <Grid.ColumnDefinitions>
@@ -62,7 +130,7 @@
                 </GroupBox>
 
                 <!-- Row 1: 点击间隔 + 鼠标宏录制 -->
-                <GroupBox Grid.Row="1" Grid.Column="0" Header="点击间隔" VerticalAlignment="Stretch">
+                <GroupBox Grid.Row="2" Grid.Column="0" Header="点击间隔" VerticalAlignment="Stretch">
                     <StackPanel>
                         <RadioButton x:Name="RbIntervalMs" Content="毫秒 (ms)" GroupName="IntervalMode" Checked="OnIntervalMs"/>
                         <Border Padding="4,0,4,8" Visibility="{Binding IsMsMode,Converter={StaticResource BoolToVis}}">
@@ -88,9 +156,10 @@
                     </StackPanel>
                 </GroupBox>
 
-                <GroupBox Grid.Row="1" Grid.Column="2" Header="鼠标宏录制" VerticalAlignment="Stretch">
+                <GroupBox Grid.Row="2" Grid.Column="2" Header="鼠标宏录制" VerticalAlignment="Stretch">
                     <StackPanel>
-                        <Button Height="36" Margin="0,0,0,8" Command="{Binding ToggleRecordingCommand}">
+                        <Button Height="36" Margin="0,0,0,8" Command="{Binding ToggleRecordingCommand}"
+                                IsEnabled="{Binding IsPaused, Converter={StaticResource BoolInverse}}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                     <Style.Triggers>
@@ -132,12 +201,13 @@
                 </GroupBox>
 
                 <!-- Row 2: 定时点击任务 -->
-                <GroupBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Header="定时点击任务" VerticalAlignment="Stretch">
+                <GroupBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Header="定时点击任务" VerticalAlignment="Stretch">
                     <StackPanel>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/><ColumnDefinition Width="8"/><ColumnDefinition Width="110"/><ColumnDefinition Width="12"/>
                                 <ColumnDefinition Width="Auto"/><ColumnDefinition Width="6"/><ColumnDefinition Width="80"/><ColumnDefinition Width="6"/><ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="12"/><ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="任务名称" VerticalAlignment="Center" Style="{StaticResource TextSecondary}"/>
                             <TextBox Grid.Column="2" Height="30" Text="{Binding NewTaskLabel,UpdateSourceTrigger=PropertyChanged}"/>
@@ -145,8 +215,8 @@
                             <TextBox Grid.Column="6" Height="30" Text="{Binding NewTaskDelayValue,UpdateSourceTrigger=PropertyChanged}" TextAlignment="Center"/>
                             <ComboBox Grid.Column="8" Height="30" ItemsSource="{Binding TimeUnitOptions}"
                                       SelectedIndex="{Binding SelectedTimeUnitIndex}" FontSize="12" VerticalContentAlignment="Center"/>
+                            <TextBlock Grid.Column="10" Text="{Binding NewTaskDelayDisplay}" VerticalAlignment="Center" Style="{StaticResource TextHint}"/>
                         </Grid>
-                        <TextBlock Margin="0,4,0,8" Style="{StaticResource TextHint}" Text="{Binding NewTaskDelayDisplay}"/>
                         <TextBlock Margin="0,0,0,8" Style="{StaticResource TextHint}">
                             <Run Text="当前目标: ("/><Run Text="{Binding TargetX}" FontWeight="Bold" Foreground="{StaticResource ColorPrimary}"/>
                             <Run Text=", "/><Run Text="{Binding TargetY}" FontWeight="Bold" Foreground="{StaticResource ColorPrimary}"/>
@@ -165,83 +235,103 @@
                     </StackPanel>
                 </GroupBox>
 
-                <!-- Row 3: 键盘触发 + 主操作按钮 -->
-                <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="16"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Border Grid.Column="0" VerticalAlignment="Stretch" Padding="10" Background="{StaticResource ColorSurface}" CornerRadius="12"
-                            BorderBrush="{StaticResource ColorBorder}" BorderThickness="1">
-                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                <!-- Row 3: 键盘触发点击 -->
+                <GroupBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Header="键盘触发点击">
+                    <StackPanel>
+                        <!-- 触发按键 + 录键 / 列表 / 设置 + 全局监听开关（同一行） -->
+                        <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/><ColumnDefinition Width="6"/>
-                                <ColumnDefinition Width="Auto"/><ColumnDefinition Width="6"/>
-                                <ColumnDefinition Width="Auto"/><ColumnDefinition Width="6"/>
-                                <ColumnDefinition Width="Auto"/><ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="触发按键：" VerticalAlignment="Center" Style="{StaticResource TextSecondary}"/>
-                            <Border Grid.Column="2" Padding="12,4" MinWidth="80" Background="{StaticResource ColorBackground}"
-                                    CornerRadius="6" BorderBrush="{StaticResource ColorBorder}" BorderThickness="1">
-                                <TextBlock Text="{Binding TriggerKeyDisplay}" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            </Border>
-                            <Button Grid.Column="4" Width="72" Padding="4,6" FontSize="12"
-                                    Command="{Binding RecordTriggerKeyCommand}">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                        <Setter Property="Content" Value="录键绑定"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsListeningForKey}" Value="True">
-                                                <Setter Property="Content" Value="请按键..."/><Setter Property="Background" Value="{StaticResource ColorDanger}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-                            <Button Grid.Column="6" Width="72" Padding="4,6" FontSize="12"
-                                    Style="{StaticResource ButtonSecondary}"
-                                    Command="{Binding ShowTriggerBindListCommand}">绑定列表</Button>
-                            <Button Grid.Column="8" Width="60" Padding="4,6" FontSize="12"
-                                    Command="{Binding ToggleKeyboardTriggerCommand}">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding KeyboardTriggerEnabled}" Value="False"><Setter Property="Content" Value="已关闭"/></DataTrigger>
-                                            <DataTrigger Binding="{Binding KeyboardTriggerEnabled}" Value="True">
-                                                <Setter Property="Content" Value="已开启"/><Setter Property="Background" Value="{StaticResource ColorSuccess}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-                        </Grid>
-                    </Border>
 
-                    <Button Grid.Column="2" VerticalAlignment="Stretch" FontSize="14" FontWeight="Bold"
-                            MinWidth="130"
-                            Command="{Binding ToggleClickingCommand}">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsRunning}" Value="False">
-                                        <Setter Property="Background" Value="{StaticResource ColorSuccess}"/><Setter Property="Content" Value="开始 (F6)"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                        <Setter Property="Background" Value="{StaticResource ColorDanger}"/><Setter Property="Content" Value="停止 (F6)"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                </Grid>
+                            <WrapPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="触发按键：" VerticalAlignment="Center" Style="{StaticResource TextSecondary}"/>
+                                <Border Padding="12,4" MinWidth="80" MaxWidth="140" Background="{StaticResource ColorBackground}"
+                                        CornerRadius="6" BorderBrush="{StaticResource ColorBorder}" BorderThickness="1">
+                                    <TextBlock Text="{Binding TriggerKeyDisplay}" FontWeight="Bold"
+                                               HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                </Border>
+                                <Button Width="78" Height="30" Margin="8,0,0,0" Padding="4,4" FontSize="12"
+                                        ToolTip="使用当前固定坐标绑定按键；Esc 或再次点击可取消"
+                                        IsEnabled="{Binding CanRecordTriggerKey}"
+                                        Command="{Binding RecordTriggerKeyCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                            <Setter Property="Content" Value="录键绑定"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsListeningForKey}" Value="True">
+                                                    <Setter Property="Content" Value="请按键..."/>
+                                                    <Setter Property="Background" Value="{StaticResource ColorDanger}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                                <Button Width="62" Height="30" Margin="6,0,0,0" Padding="4,4" FontSize="12"
+                                        Style="{StaticResource ButtonSecondary}"
+                                        Command="{Binding ShowTriggerBindListCommand}">绑定列表</Button>
+                                <Button Width="62" Height="30" Margin="6,0,0,0" Padding="4,4" FontSize="12"
+                                        Style="{StaticResource ButtonSecondary}"
+                                        Command="{Binding ShowTriggerSettingsCommand}">触发设置</Button>
+                            </WrapPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                                <TextBlock Text="监听：" VerticalAlignment="Center" Style="{StaticResource TextSecondary}"/>
+                                <TextBlock Text="{Binding KeyboardListenerStateText}" FontWeight="SemiBold" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{StaticResource ColorTextMuted}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding KeyboardTriggerEnabled}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource ColorSuccess}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <Button Width="80" Height="30" Margin="8,0,0,0" Padding="4,4" FontSize="12"
+                                        Content="{Binding KeyboardTriggerToggleText}"
+                                        Command="{Binding ToggleKeyboardTriggerCommand}"
+                                        IsEnabled="{Binding IsPaused, Converter={StaticResource BoolInverse}}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding KeyboardTriggerEnabled}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource ColorSuccess}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding KeyboardTriggerEnabled}" Value="False">
+                                                    <Setter Property="Background" Value="{StaticResource ColorAccent}"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- 录键前置条件提示 -->
+                        <TextBlock Margin="0,6,0,0" TextWrapping="Wrap">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource TextHint}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding UseFixedPosition}" Value="False">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                            <Run Text="录键使用当前固定坐标，请先选择「固定屏幕位置」并选取坐标"/>
+                        </TextBlock>
+                    </StackPanel>
+                </GroupBox>
             </Grid>
         </ScrollViewer>
 
         <!-- 状态栏 -->
-        <Border Grid.Row="1" Padding="16,8" Background="{StaticResource ColorSurface}"
+        <Border Grid.Row="2" Padding="16,8" Background="{StaticResource ColorSurface}"
                 BorderBrush="{StaticResource ColorBorderLight}" BorderThickness="0,1,0,0">
             <Grid>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
@@ -249,9 +339,13 @@
                         <Ellipse.Fill><Binding Path="IsRunning" Converter="{StaticResource BoolToColor}"/></Ellipse.Fill>
                     </Ellipse>
                     <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" FontSize="11"
+                               Foreground="{StaticResource ColorTextMuted}">
+                        <Run Text="监听："/><Run Text="{Binding KeyboardListenerStateText, Mode=OneWay}"/>
+                    </TextBlock>
                 </StackPanel>
                 <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center"
-                           Text="快捷键: F6 开始/停止  |  F7 急停  |  F8 录制  |  F9 播放  |  F10 循环"
+                           Text="F6 开始/停止 · F7 暂停/恢复 · F8 录制 · F9 播放 · F10 循环"
                            FontSize="11" Foreground="{StaticResource ColorTextMuted}"/>
             </Grid>
         </Border>

@@ -82,6 +82,23 @@ public class TrayService : ITrayService
             TrayRightClick?.Invoke();
     }
 
+    /// <inheritdoc />
+    public void UpdateToolTip(string text)
+    {
+        if (!_added) return;
+
+        var nid = new NOTIFYICONDATA
+        {
+            cbSize = Marshal.SizeOf<NOTIFYICONDATA>(),
+            hWnd = _hWnd,
+            uID = 1,
+            uFlags = Win32Constants.NIF_TIP,
+            szTip = text
+        };
+
+        NativeMethods.Shell_NotifyIcon(Win32Constants.NIM_MODIFY, ref nid);
+    }
+
     /// <summary>
     /// 退出程序 — 停止连点、保存配置、移除托盘图标并终止进程
     /// </summary>

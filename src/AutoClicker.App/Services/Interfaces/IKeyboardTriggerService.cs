@@ -29,8 +29,17 @@ public interface IKeyboardTriggerService : IDisposable
     void Disable();
 
     /// <summary>
+    /// 设置前台窗口过滤 — 启用后只有指定进程在前台时才触发点击。
+    /// 进程名匹配不区分大小写，可带或不带 .exe 后缀。
+    /// </summary>
+    void SetForegroundProcessFilter(bool enabled, IEnumerable<string> allowedProcessNames);
+
+    /// <summary>
     /// 进入录制模式 — 临时安装钩子（如果未激活），等待下一次按键按下
-    /// 返回捕获到的虚拟键码，录制期间正常触发事件被抑制
+    /// 返回捕获到的虚拟键码；按 Esc 或调用 CancelRecording 时返回 0
     /// </summary>
     Task<uint> RecordKeyAsync();
+
+    /// <summary>取消正在进行的按键录制（RecordKeyAsync 将返回 0）</summary>
+    void CancelRecording();
 }

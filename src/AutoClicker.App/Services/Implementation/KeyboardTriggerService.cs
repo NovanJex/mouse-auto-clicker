@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.InteropServices;
 using AutoClicker.App.Interop;
 using AutoClicker.App.Models;
@@ -20,6 +21,11 @@ public class KeyboardTriggerService : IKeyboardTriggerService
     private bool _ownedHook;                                    // 钩子是否由 RecordKeyAsync 临时安装
     private Dictionary<uint, TriggerBinding> _bindings = new(); // vkCode → 绑定映射
     private List<TriggerBinding> _bindingList = new();          // 有序列表副本
+
+    private bool _foregroundFilterEnabled;                      // 是否启用前台进程过滤
+    private HashSet<string> _allowedProcesses = new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly int CurrentProcessId = Environment.ProcessId;
 
     /// <inheritdoc />
     public bool IsEnabled { get; private set; }
@@ -46,10 +52,30 @@ public class KeyboardTriggerService : IKeyboardTriggerService
     }
 
     /// <inheritdoc />
+    public void SetForegroundProcessFilter(bool enabled, IEnumerable<string> allowedProcessNames)
+    {
+        _foregroundFilterEnabled = enabled;
+
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in allowedProcessNames)
+        {
+            if (string.IsNullOrWhiteSpace(name)) continue;
+
+            // 兼容用户填写完整路径/带引号的情况，只保留文件名
+            string fileName = Path.GetFileName(name.Trim().Trim('"'));
+            if (!string.IsNullOrEmpty(fileName))
+                set.Add(fileName);
+        }
+
+        _allowedProcesses = set;
+    }
+
+    /// <inheritdoc />
     public void Enable()
     {
         if (IsEnabled) return;
 
+        _pressedKeys.Clear();
         _hookProc = HookCallback;
         var hMod = NativeMethods.GetModuleHandle(null);
         _hookHandle = NativeMethods.SetWindowsHookEx(
@@ -86,7 +112,13 @@ public class KeyboardTriggerService : IKeyboardTriggerService
     /// <inheritdoc />
     public async Task<uint> RecordKeyAsync()
     {
-        _recordingTcs = new TaskCompletionSource<uint>();
+        // 录制开始前清空按键状态，避免上一步残留导致首次按键被当成"重复按下"
+        _pressedKeys.Clear();
+        _ownedHook = false;
+
+        // 异步续体不在钩子回调内同步执行，避免拖长钩子处理时间
+        var tcs = new TaskCompletionSource<uint>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _recordingTcs = tcs;
 
         // 如果钩子尚未安装，临时安装
         if (!IsEnabled)
@@ -95,14 +127,20 @@ public class KeyboardTriggerService : IKeyboardTriggerService
             _ownedHook = IsEnabled;
         }
 
+        if (!IsEnabled)
+        {
+            _recordingTcs = null;
+            return 0;
+        }
+
         try
         {
-            uint vkCode = await _recordingTcs.Task;
-            return vkCode;
+            return await tcs.Task;
         }
         finally
         {
-            _recordingTcs = null;
+            if (ReferenceEquals(_recordingTcs, tcs))
+                _recordingTcs = null;
 
             // 如果是临时安装的钩子，录制完成后卸载
             if (_ownedHook)
@@ -112,6 +150,9 @@ public class KeyboardTriggerService : IKeyboardTriggerService
             }
         }
     }
+
+    /// <inheritdoc />
+    public void CancelRecording() => _recordingTcs?.TrySetResult(0);
 
     /// <summary>
     /// 钩子回调 — 在 UI 线程上执行（钩子安装在 UI 线程上）
@@ -139,15 +180,16 @@ public class KeyboardTriggerService : IKeyboardTriggerService
                 if (!_pressedKeys.Add(vk))
                     return NativeMethods.CallNextHookEx(_hookHandle, nCode, wParam, lParam);
 
-                // 录制模式：捕获下一个按键
+                // 录制模式：捕获下一个按键（Esc 表示取消），录制期间不触发点击
                 if (_recordingTcs is not null)
                 {
-                    _recordingTcs.TrySetResult(vk);
+                    _recordingTcs.TrySetResult(vk == Win32Constants.VK_ESCAPE ? 0u : vk);
                 }
                 // 正常触发模式：在绑定字典中查找匹配的按键
                 else if (IsEnabled && _bindings.TryGetValue(vk, out var binding))
                 {
-                    TriggerKeyPressed?.Invoke(this, binding);
+                    if (CanTriggerInForeground())
+                        TriggerKeyPressed?.Invoke(this, binding);
                 }
             }
             else if (msgId == Win32Constants.WM_KEYUP || msgId == Win32Constants.WM_SYSKEYUP)
@@ -159,6 +201,28 @@ public class KeyboardTriggerService : IKeyboardTriggerService
 
         // 必须调用 CallNextHookEx，不阻塞任何按键
         return NativeMethods.CallNextHookEx(_hookHandle, nCode, wParam, lParam);
+    }
+
+    /// <summary>
+    /// 判断当前前台窗口是否允许触发。
+    /// 1. 应用自己的窗口聚焦时不触发（避免在软件内输入/录键时误点）；
+    /// 2. 启用白名单后，只有列表中的进程在前台时才触发。
+    /// </summary>
+    private bool CanTriggerInForeground()
+    {
+        IntPtr foreground = NativeMethods.GetForegroundWindow();
+        if (foreground == IntPtr.Zero)
+            return false;
+
+        NativeMethods.GetWindowThreadProcessId(foreground, out uint pid);
+        if (pid == 0 || (int)pid == CurrentProcessId)
+            return false;
+
+        if (!_foregroundFilterEnabled)
+            return true;
+
+        string processName = WindowHelper.GetProcessName((int)pid);
+        return processName.Length > 0 && _allowedProcesses.Contains(processName);
     }
 
     public void Dispose()

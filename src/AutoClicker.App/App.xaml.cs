@@ -63,6 +63,18 @@ public partial class App : Application
         var handle = new WindowInteropHelper(_mainWindow).Handle;
         _trayService.Create(handle);
 
+        // 托盘悬停提示跟随总开关 / 监听状态变化
+        var vm = _serviceProvider.GetRequiredService<MainViewModel>();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(MainViewModel.IsPaused)
+                or nameof(MainViewModel.KeyboardTriggerEnabled))
+            {
+                _trayService?.UpdateToolTip(vm.TrayToolTip);
+            }
+        };
+        _trayService.UpdateToolTip(vm.TrayToolTip);
+
         // 托盘左键 → 恢复窗口
         _trayService.TrayLeftClick += () => Dispatcher.Invoke(RestoreWindow);
         // 托盘右键 → 弹出上下文菜单
@@ -115,13 +127,29 @@ public partial class App : Application
             Command = new CommunityToolkit.Mvvm.Input.RelayCommand(RestoreWindow)
         });
 
-        // 开始/停止连点快捷项（动态标题跟随运行状态）
         if (vm is not null)
         {
+            // 总暂停 / 恢复
+            menu.Items.Add(new MenuItem
+            {
+                Header = vm.IsPaused ? "恢复全部 (F7)" : "暂停全部 (F7)",
+                Command = vm.TogglePauseCommand
+            });
+
+            // 开始/停止连点（动态标题跟随运行状态）
             menu.Items.Add(new MenuItem
             {
                 Header = vm.IsRunning ? "停止连点" : "开始连点",
-                Command = vm.ToggleClickingCommand
+                Command = vm.ToggleClickingCommand,
+                IsEnabled = !vm.IsPaused
+            });
+
+            // 键盘监听开关
+            menu.Items.Add(new MenuItem
+            {
+                Header = vm.KeyboardTriggerEnabled ? "关闭键盘监听" : "开启键盘监听",
+                Command = vm.ToggleKeyboardTriggerCommand,
+                IsEnabled = !vm.IsPaused
             });
         }
 
@@ -160,6 +188,7 @@ public partial class App : Application
         {
             if (settings.Settings.CloseToTray)
             {
+                vm?.PauseIfMinimizedToTray();
                 _mainWindow?.Hide();
                 return;
             }
@@ -201,6 +230,7 @@ public partial class App : Application
                 settings.Save();
             }
 
+            vm?.PauseIfMinimizedToTray();
             _mainWindow?.Hide();
         }
         // 点击 X 关闭对话框 → 什么都不做
@@ -209,6 +239,17 @@ public partial class App : Application
     /// <summary>会话恢复（解锁/登录）后重新注册热键</summary>
     private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
     {
+        // 锁屏 → 按配置自动暂停全部
+        if (e.Reason == SessionSwitchReason.SessionLock)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                var vm = _serviceProvider?.GetService<MainViewModel>();
+                vm?.PauseIfLocked();
+            });
+            return;
+        }
+
         if (e.Reason == SessionSwitchReason.SessionUnlock
             || e.Reason == SessionSwitchReason.ConsoleConnect)
         {

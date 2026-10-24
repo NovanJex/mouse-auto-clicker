@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AutoClicker.App.Interop;
 using AutoClicker.App.Models;
 using AutoClicker.App.Serialization;
 using AutoClicker.App.Services.Implementation;
@@ -35,7 +36,8 @@ public partial class MainViewModel : ObservableObject
     private CancellationTokenSource? _saveDebounceCts;
     private RecordingSession? _currentRecording;
     private bool _isPickingCoordinate;
-    private Window? _keepAliveWindow;   // 保持子窗口引用，防止 GC 回收导致窗口异常
+    private bool _listenerWasEnabledBeforePause;
+    private readonly List<Window> _childWindows = new();   // 保持子窗口引用，防止 GC 回收导致窗口异常
     private static readonly string RecordingPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "AutoClicker", "recording.json");
@@ -112,14 +114,77 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isListeningForKey;
 
+    /// <summary>总开关：true = 已暂停（所有自动化停止，按 F7 恢复）</summary>
+    [ObservableProperty]
+    private bool _isPaused = true;
+
+    /// <summary>启动时是否自动恢复键盘监听</summary>
+    [ObservableProperty]
+    private bool _autoResumeListeningOnStartup;
+
+    /// <summary>是否仅当指定程序在前台时才触发点击</summary>
+    [ObservableProperty]
+    private bool _triggerWindowFilterEnabled;
+
+    /// <summary>关闭窗口到托盘时是否自动暂停全部</summary>
+    [ObservableProperty]
+    private bool _pauseWhenMinimizedToTray = true;
+
+    /// <summary>锁屏时是否自动暂停全部</summary>
+    [ObservableProperty]
+    private bool _pauseWhenLocked = true;
+
+    /// <summary>手动添加白名单进程的输入框</summary>
+    [ObservableProperty]
+    private string _triggerProcessInput = "";
+
+    /// <summary>捕获前台窗口时的状态提示</summary>
+    [ObservableProperty]
+    private string _foregroundCaptureStatus = "";
+
+    /// <summary>前台窗口白名单（进程名）</summary>
+    public ObservableCollection<string> TriggerWindowProcesses { get; } = new();
+
     /// <summary>当前所有快捷键绑定的只读列表（来自服务层）</summary>
     public IReadOnlyList<TriggerBinding> TriggerBindings => _keyboardTriggerService.Bindings;
 
     /// <summary>触发键的可读显示名称（显示最新录制的按键，或"未绑定"）</summary>
     public string TriggerKeyDisplay =>
-        _keyboardTriggerService.Bindings.Count > 0
-            ? _keyboardTriggerService.Bindings[^1].KeyDisplay
-            : "未绑定";
+        _keyboardTriggerService.Bindings.Count switch
+        {
+            0 => "未绑定",
+            1 => _keyboardTriggerService.Bindings[0].KeyDisplay,
+            var count => $"{_keyboardTriggerService.Bindings[^1].KeyDisplay} 等 {count} 个键"
+        };
+
+    /// <summary>键盘监听状态文字</summary>
+    public string KeyboardListenerStateText => KeyboardTriggerEnabled ? "监听中" : "已关闭";
+
+    /// <summary>监听开关按钮文字（显示可执行的动作）</summary>
+    public string KeyboardTriggerToggleText => KeyboardTriggerEnabled ? "停止监听" : "启动监听";
+
+    /// <summary>总开关状态文字（命令条使用短文案，详细说明见 GlobalStateHint）</summary>
+    public string GlobalStateText => IsPaused ? "已暂停" : "运行中";
+
+    /// <summary>总开关说明文字</summary>
+    public string GlobalStateHint => IsPaused
+        ? "所有连点、回放、定时任务和键盘监听均已停止"
+        : KeyboardTriggerEnabled
+            ? "键盘监听中；按 F7 可随时暂停全部"
+            : "键盘监听未开启；按 F7 可随时暂停全部";
+
+    /// <summary>总开关按钮文字</summary>
+    public string PauseAllButtonText => IsPaused ? "恢复全部 (F7)" : "暂停全部 (F7)";
+
+    /// <summary>是否可以录制触发键（暂停或未选固定坐标时不可用）</summary>
+    public bool CanRecordTriggerKey => !IsPaused && UseFixedPosition;
+
+    /// <summary>托盘悬停提示</summary>
+    public string TrayToolTip => IsPaused
+        ? "鼠标连点器 — 已暂停"
+        : KeyboardTriggerEnabled
+            ? "鼠标连点器 — 键盘监听中"
+            : "鼠标连点器 — 就绪";
 
     // ── 定时任务相关属性 ──
 
@@ -139,7 +204,11 @@ public partial class MainViewModel : ObservableObject
     private int _selectedTimeUnitIndex; // 0=秒, 1=分钟, 2=小时
 
     // ── 设置属性变更自动保存（防抖 500ms） ──
-    partial void OnUseFixedPositionChanged(bool value) => DebouncedSaveSettings();
+    partial void OnUseFixedPositionChanged(bool value)
+    {
+        DebouncedSaveSettings();
+        OnPropertyChanged(nameof(CanRecordTriggerKey));
+    }
     partial void OnTargetXChanged(int value) => DebouncedSaveSettings();
     partial void OnTargetYChanged(int value) => DebouncedSaveSettings();
 
@@ -228,6 +297,12 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task ToggleClicking()
     {
+        if (IsPaused)
+        {
+            StatusText = "已暂停，请按 F7 恢复";
+            return;
+        }
+
         if (IsRunning)
             StopClicking();
         else
@@ -258,6 +333,12 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ToggleRecording()
     {
+        if (IsPaused)
+        {
+            StatusText = "已暂停，请按 F7 恢复";
+            return;
+        }
+
         if (IsPlaying) return;
 
         if (_recordingService.IsRecording)
@@ -281,6 +362,12 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task PlayRecording()
     {
+        if (IsPaused)
+        {
+            StatusText = "已暂停，请按 F7 恢复";
+            return;
+        }
+
         if (_playerService.IsPlaying)
         {
             _playerService.Stop();
@@ -304,6 +391,12 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task LoopPlayRecording()
     {
+        if (IsPaused)
+        {
+            StatusText = "已暂停，请按 F7 恢复";
+            return;
+        }
+
         // 循环播放中 → 停止循环
         if (IsLoopPlaying)
         {
@@ -363,47 +456,113 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ToggleKeyboardTrigger()
     {
+        if (IsPaused)
+        {
+            StatusText = "已暂停，请先按 F7 恢复";
+            return;
+        }
+
         KeyboardTriggerEnabled = !KeyboardTriggerEnabled;
+
+        if (!KeyboardTriggerEnabled)
+        {
+            StatusText = "键盘监听已关闭";
+        }
+        else if (!TriggerWindowFilterEnabled)
+        {
+            StatusText = "键盘监听已开启（建议在触发设置中开启前台窗口过滤）";
+        }
+        else if (TriggerWindowProcesses.Count == 0)
+        {
+            StatusText = "键盘监听已开启，但白名单为空，不会触发";
+        }
+        else
+        {
+            StatusText = "键盘监听已开启";
+        }
+    }
+
+    /// <summary>切换总开关：暂停全部 / 恢复全部</summary>
+    [RelayCommand]
+    private void TogglePause()
+    {
+        if (IsPaused)
+            ExitPause();
+        else
+            EnterPause();
     }
 
     /// <summary>录制触发按键 — 录键后使用当前坐标和点击模式创建绑定</summary>
     [RelayCommand]
     private async Task RecordTriggerKey()
     {
-        if (!UseFixedPosition) return;
+        if (IsPaused)
+        {
+            StatusText = "已暂停，请先按 F7 恢复";
+            return;
+        }
+
+        if (!UseFixedPosition)
+        {
+            StatusText = "录键绑定前请先选择「固定屏幕位置」并选取坐标";
+            return;
+        }
+
+        // 再次点击按钮 = 取消录制
+        if (IsListeningForKey)
+        {
+            _keyboardTriggerService.CancelRecording();
+            StatusText = "已取消录键";
+            return;
+        }
 
         IsListeningForKey = true;
+        StatusText = "请按下要绑定的按键（Esc 取消）";
         try
         {
             uint vkCode = await _keyboardTriggerService.RecordKeyAsync();
-            if (vkCode > 0)
+            if (vkCode == 0)
             {
-                // 检查是否与已有绑定按键重复，重复则更新该绑定的坐标和点击模式
-                var existing = _keyboardTriggerService.Bindings.FirstOrDefault(b => b.VkCode == vkCode);
-                var list = _keyboardTriggerService.Bindings.ToList();
-
-                if (existing is not null)
-                {
-                    existing.TargetX = TargetX;
-                    existing.TargetY = TargetY;
-                    existing.ClickMode = SelectedClickMode;
-                }
-                else
-                {
-                    list.Add(new TriggerBinding
-                    {
-                        VkCode = vkCode,
-                        TargetX = TargetX,
-                        TargetY = TargetY,
-                        ClickMode = SelectedClickMode
-                    });
-                }
-
-                _keyboardTriggerService.SetBindings(list);
-                OnPropertyChanged(nameof(TriggerBindings));
-                OnPropertyChanged(nameof(TriggerKeyDisplay));
-                DebouncedSaveSettings();
+                StatusText = "已取消录键";
+                return;
             }
+
+            // F6–F10 已被全局热键占用，绑定后会永久冲突
+            if (vkCode >= Win32Constants.VK_F6 && vkCode <= Win32Constants.VK_F10)
+            {
+                StatusText = "F6–F10 是全局热键，不能作为触发键，请换一个键";
+                return;
+            }
+
+            // 检查是否与已有绑定按键重复，重复则更新该绑定的坐标和点击模式
+            var existing = _keyboardTriggerService.Bindings.FirstOrDefault(b => b.VkCode == vkCode);
+            var list = _keyboardTriggerService.Bindings.ToList();
+
+            if (existing is not null)
+            {
+                existing.TargetX = TargetX;
+                existing.TargetY = TargetY;
+                existing.ClickMode = SelectedClickMode;
+            }
+            else
+            {
+                list.Add(new TriggerBinding
+                {
+                    VkCode = vkCode,
+                    TargetX = TargetX,
+                    TargetY = TargetY,
+                    ClickMode = SelectedClickMode
+                });
+            }
+
+            _keyboardTriggerService.SetBindings(list);
+            OnPropertyChanged(nameof(TriggerBindings));
+            OnPropertyChanged(nameof(TriggerKeyDisplay));
+            DebouncedSaveSettings();
+
+            var keyDisplay = _keyboardTriggerService.Bindings
+                .FirstOrDefault(b => b.VkCode == vkCode)?.KeyDisplay ?? vkCode.ToString();
+            StatusText = $"已绑定按键 {keyDisplay}";
         }
         finally
         {
@@ -415,8 +574,14 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ShowTriggerBindList()
     {
-        _keepAliveWindow = new TriggerBindListView(this) { Owner = Application.Current.MainWindow };
-        _keepAliveWindow.Show();
+        ShowChildWindow(new TriggerBindListView(this));
+    }
+
+    /// <summary>打开键盘触发设置窗口</summary>
+    [RelayCommand]
+    private void ShowTriggerSettings()
+    {
+        ShowChildWindow(new TriggerSettingsWindow(this));
     }
 
     /// <summary>删除指定快捷键触发绑定</summary>
@@ -429,6 +594,87 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(TriggerBindings));
         OnPropertyChanged(nameof(TriggerKeyDisplay));
         DebouncedSaveSettings();
+    }
+
+    /// <summary>手动添加前台窗口白名单进程</summary>
+    [RelayCommand]
+    private void AddTriggerProcess()
+    {
+        AddTriggerProcessName(TriggerProcessInput);
+        TriggerProcessInput = "";
+    }
+
+    /// <summary>删除前台窗口白名单进程</summary>
+    [RelayCommand]
+    private void RemoveTriggerProcess(string processName)
+    {
+        if (TriggerWindowProcesses.Remove(processName))
+        {
+            ApplyTriggerFilter();
+            DebouncedSaveSettings();
+        }
+    }
+
+    /// <summary>捕获当前前台窗口进程 — 先留 3 秒时间切换到目标窗口</summary>
+    [RelayCommand]
+    private async Task CaptureForegroundProcess()
+    {
+        ForegroundCaptureStatus = "请在 3 秒内切换到目标窗口...";
+        await Task.Delay(3000);
+
+        int pid = WindowHelper.GetForegroundProcessId();
+        if (pid <= 0)
+        {
+            ForegroundCaptureStatus = "未检测到前台窗口，请手动输入进程名";
+            return;
+        }
+
+        if (pid == Environment.ProcessId)
+        {
+            ForegroundCaptureStatus = "当前前台是本程序，请切换到目标窗口后重试";
+            return;
+        }
+
+        string processName = WindowHelper.GetProcessName(pid);
+        if (processName.Length == 0)
+        {
+            ForegroundCaptureStatus = "无法读取进程名，请手动输入";
+            return;
+        }
+
+        bool added = AddTriggerProcessName(processName);
+        ForegroundCaptureStatus = added
+            ? $"已添加：{processName}"
+            : $"{processName} 已在列表中";
+    }
+
+    /// <summary>添加白名单进程名，返回是否新增成功</summary>
+    private bool AddTriggerProcessName(string? rawName)
+    {
+        string name = (rawName ?? "").Trim().Trim('"');
+        if (name.Length == 0) return false;
+
+        // 允许用户粘贴完整路径，只保留文件名
+        name = Path.GetFileName(name);
+        if (name.Length == 0) return false;
+        if (!name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            name += ".exe";
+
+        // 本程序自身不允许加入白名单
+        string? currentProcess = Path.GetFileName(Environment.ProcessPath);
+        if (!string.IsNullOrEmpty(currentProcess)
+            && string.Equals(name, currentProcess, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (TriggerWindowProcesses.Any(p => string.Equals(p, name, StringComparison.OrdinalIgnoreCase)))
+            return false;
+
+        TriggerWindowProcesses.Add(name);
+        ApplyTriggerFilter();
+        DebouncedSaveSettings();
+        return true;
     }
 
     // ── 定时任务命令 ──
@@ -474,6 +720,12 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task StartScheduledTasks()
     {
+        if (IsPaused)
+        {
+            StatusText = "已暂停，请按 F7 恢复";
+            return;
+        }
+
         if (IsScheduledRunning || _scheduledTaskService.Tasks.Count == 0) return;
 
         IsScheduledRunning = true;
@@ -494,8 +746,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ShowPlanList()
     {
-        _keepAliveWindow = new PlanListView(this) { Owner = Application.Current.MainWindow };
-        _keepAliveWindow.Show();
+        ShowChildWindow(new PlanListView(this));
     }
 
     // ── 公共 API ──
@@ -581,6 +832,69 @@ public partial class MainViewModel : ObservableObject
         _hotkeyService.ReregisterAll();
     }
 
+    /// <summary>进入总暂停状态 — 停止所有自动化并禁用键盘监听</summary>
+    public void EnterPause(string? status = null)
+    {
+        if (IsPaused) return;
+
+        // 记录暂停前的监听状态，恢复时只恢复监听
+        _listenerWasEnabledBeforePause = KeyboardTriggerEnabled;
+
+        StopClicking();
+        _loopCts?.Cancel();
+        if (_playerService.IsPlaying)
+            _playerService.Stop();
+        IsPlaying = false;
+        IsLoopPlaying = false;
+
+        if (_recordingService.IsRecording)
+            _recordingService.StopRecording();
+        IsRecording = false;
+
+        // 如果正在录键，一并取消
+        if (IsListeningForKey)
+            _keyboardTriggerService.CancelRecording();
+
+        if (_scheduledTaskService.IsRunning)
+            _scheduledTaskService.Stop();
+
+        if (KeyboardTriggerEnabled)
+            KeyboardTriggerEnabled = false;
+
+        IsPaused = true;
+        StatusText = status ?? "已暂停（按 F7 恢复）";
+    }
+
+    /// <summary>退出总暂停状态 — 只恢复暂停前的键盘监听，不自动重启连点/任务</summary>
+    public void ExitPause()
+    {
+        if (!IsPaused) return;
+
+        IsPaused = false;
+
+        if (_listenerWasEnabledBeforePause)
+        {
+            KeyboardTriggerEnabled = true;
+            _listenerWasEnabledBeforePause = false;
+        }
+
+        StatusText = "已恢复";
+    }
+
+    /// <summary>关闭到托盘时按配置自动暂停</summary>
+    public void PauseIfMinimizedToTray()
+    {
+        if (PauseWhenMinimizedToTray)
+            EnterPause("已最小化到托盘，自动暂停");
+    }
+
+    /// <summary>锁屏时按配置自动暂停</summary>
+    public void PauseIfLocked()
+    {
+        if (PauseWhenLocked)
+            EnterPause("已锁屏，自动暂停");
+    }
+
     // ── 点击模式变化时通知衍生属性 ──
 
     partial void OnSelectedClickModeChanged(ClickMode value)
@@ -607,7 +921,50 @@ public partial class MainViewModel : ObservableObject
             _keyboardTriggerService.Enable();
         else
             _keyboardTriggerService.Disable();
+
         DebouncedSaveSettings();
+
+        OnPropertyChanged(nameof(KeyboardListenerStateText));
+        OnPropertyChanged(nameof(KeyboardTriggerToggleText));
+        OnPropertyChanged(nameof(GlobalStateHint));
+        OnPropertyChanged(nameof(TrayToolTip));
+    }
+
+    partial void OnIsPausedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(GlobalStateText));
+        OnPropertyChanged(nameof(GlobalStateHint));
+        OnPropertyChanged(nameof(PauseAllButtonText));
+        OnPropertyChanged(nameof(CanRecordTriggerKey));
+        OnPropertyChanged(nameof(TrayToolTip));
+    }
+
+    partial void OnAutoResumeListeningOnStartupChanged(bool value) => DebouncedSaveSettings();
+
+    partial void OnTriggerWindowFilterEnabledChanged(bool value)
+    {
+        ApplyTriggerFilter();
+        DebouncedSaveSettings();
+    }
+
+    partial void OnPauseWhenMinimizedToTrayChanged(bool value) => DebouncedSaveSettings();
+
+    partial void OnPauseWhenLockedChanged(bool value) => DebouncedSaveSettings();
+
+    /// <summary>将当前前台过滤配置同步给键盘钩子服务</summary>
+    private void ApplyTriggerFilter()
+    {
+        _keyboardTriggerService.SetForegroundProcessFilter(
+            TriggerWindowFilterEnabled, TriggerWindowProcesses);
+    }
+
+    /// <summary>显示子窗口并保持引用，关闭后自动移除</summary>
+    private void ShowChildWindow(Window window)
+    {
+        window.Owner = Application.Current.MainWindow;
+        window.Closed += (_, _) => _childWindows.Remove(window);
+        _childWindows.Add(window);
+        window.Show();
     }
 
     partial void OnNewTaskDelayValueChanged(int value)
@@ -734,12 +1091,27 @@ public partial class MainViewModel : ObservableObject
     /// <summary>热键按下事件处理</summary>
     private void OnHotkeyPressed(object? sender, int id)
     {
+        // 录键期间忽略所有全局热键，确保按键能被干净地录制（F6–F10 会被提示拒绝）
+        if (IsListeningForKey)
+            return;
+
+        // F7：总暂停 / 恢复（任何状态下都可用）
+        if (id == HotkeyStopId)
+        {
+            TogglePause();
+            return;
+        }
+
+        // 暂停期间只有 F7 生效
+        if (IsPaused)
+        {
+            StatusText = "已暂停，请按 F7 恢复";
+            return;
+        }
+
         // F6：开始/停止切换（与主按钮一致）
         if (id == HotkeyStartId)
             _ = ToggleClicking();
-        // F7：紧急停止（仅在运行时生效）
-        else if (id == HotkeyStopId && IsRunning)
-            StopClicking();
         else if (id == HotkeyRecordId && !IsPlaying)
             ToggleRecording();
         else if (id == HotkeyPlayId && HasRecording && !IsRecording && !IsPlaying && !IsLoopPlaying)
@@ -783,7 +1155,31 @@ public partial class MainViewModel : ObservableObject
         TargetX = s.TargetX;
         TargetY = s.TargetY;
         RepeatCount = s.RepeatCount > 0 ? s.RepeatCount : 1;
-        KeyboardTriggerEnabled = s.KeyboardTriggerEnabled;
+
+        // ── 键盘触发 / 总开关设置 ──
+        AutoResumeListeningOnStartup = s.AutoResumeListeningOnStartup;
+        TriggerWindowFilterEnabled = s.TriggerWindowFilterEnabled;
+
+        TriggerWindowProcesses.Clear();
+        if (s.TriggerWindowProcesses is { Count: > 0 })
+        {
+            foreach (var process in s.TriggerWindowProcesses)
+            {
+                if (!string.IsNullOrWhiteSpace(process))
+                    TriggerWindowProcesses.Add(process);
+            }
+        }
+
+        PauseWhenMinimizedToTray = s.PauseWhenMinimizedToTray;
+        PauseWhenLocked = s.PauseWhenLocked;
+
+        // 先应用前台过滤，再决定是否启用监听
+        ApplyTriggerFilter();
+
+        // 安全策略：默认启动即暂停；只有勾选"启动时自动恢复监听"才恢复上次的监听状态
+        IsPaused = !s.AutoResumeListeningOnStartup;
+        KeyboardTriggerEnabled = s.AutoResumeListeningOnStartup && s.KeyboardTriggerEnabled;
+        StatusText = IsPaused ? "已暂停（按 F7 恢复）" : "已停止";
 
         // 加载快捷键触发绑定列表（含旧版单键迁移）
         var triggerBindings = s.TriggerBindings ?? new List<TriggerBinding>();
@@ -801,6 +1197,7 @@ public partial class MainViewModel : ObservableObject
         }
         _keyboardTriggerService.SetBindings(triggerBindings);
         OnPropertyChanged(nameof(TriggerBindings));
+        OnPropertyChanged(nameof(TriggerKeyDisplay));
 
         // 加载定时任务列表
         _scheduledTaskService.Tasks.Clear();
@@ -916,7 +1313,16 @@ public partial class MainViewModel : ObservableObject
         s.TargetX = TargetX;
         s.TargetY = TargetY;
         s.RepeatCount = RepeatCount;
-        s.KeyboardTriggerEnabled = KeyboardTriggerEnabled;
+
+        // 暂停状态下不覆盖"上次监听偏好"：临时停用不代表用户不想在下次启动时恢复
+        if (!IsPaused)
+            s.KeyboardTriggerEnabled = KeyboardTriggerEnabled;
+
+        s.AutoResumeListeningOnStartup = AutoResumeListeningOnStartup;
+        s.TriggerWindowFilterEnabled = TriggerWindowFilterEnabled;
+        s.TriggerWindowProcesses = TriggerWindowProcesses.ToList();
+        s.PauseWhenMinimizedToTray = PauseWhenMinimizedToTray;
+        s.PauseWhenLocked = PauseWhenLocked;
         s.TriggerBindings = new List<TriggerBinding>(_keyboardTriggerService.Bindings);
         s.ScheduledTasks = new List<ScheduledClickTask>(_scheduledTaskService.Tasks);
         _settingsService.Save();

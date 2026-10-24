@@ -14,6 +14,9 @@ public interface ITrayService : IDisposable
     /// <summary>处理托盘图标消息（转发自 WndProc）</summary>
     void HandleMessage(int msg, IntPtr wParam, IntPtr lParam);
 
+    /// <summary>更新托盘图标的悬停提示</summary>
+    void UpdateToolTip(string text);
+
     /// <summary>托盘图标左键点击事件</summary>
     event Action? TrayLeftClick;
 

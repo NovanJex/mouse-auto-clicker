@@ -82,6 +82,15 @@ public static class Win32Constants
     /// <summary>低层级键盘钩子类型</summary>
     public const int WH_KEYBOARD_LL = 13;
 
+    // ── 常用虚拟键码 ──
+    public const uint VK_ESCAPE = 0x1B;
+    public const uint VK_F6 = 0x75;
+    public const uint VK_F10 = 0x79;
+
+    // ── 进程访问权限 ──
+    /// <summary>受限的进程查询权限（可读取进程名/路径）</summary>
+    public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+
     // ── 键盘消息 ──
     public const int WM_KEYDOWN = 0x0100;
     public const int WM_KEYUP = 0x0101;

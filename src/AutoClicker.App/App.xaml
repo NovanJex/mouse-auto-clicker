@@ -334,6 +334,51 @@
             </Setter>
         </Style>
 
+        <!-- ══════ CheckBox → 圆形方框勾选 ══════ -->
+        <Style TargetType="CheckBox">
+            <Setter Property="FontFamily" Value="{StaticResource FontPrimary}" />
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border Background="Transparent" Padding="0,3" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <Grid Width="18" Height="18" VerticalAlignment="Center">
+                                    <Border x:Name="Box" Width="18" Height="18" CornerRadius="4"
+                                            Background="Transparent"
+                                            BorderBrush="{StaticResource ColorTextMuted}"
+                                            BorderThickness="1.5" />
+                                    <Path x:Name="Check" Data="M4,9 L7.5,12.5 L14,4.5"
+                                          Stroke="{StaticResource ColorOnPrimary}" StrokeThickness="2"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Visibility="Collapsed" />
+                                </Grid>
+                                <ContentPresenter VerticalAlignment="Center"
+                                                  Margin="8,0,0,0"
+                                                  RecognizesAccessKey="True" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="{StaticResource ColorPrimary}" />
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource ColorPrimary}" />
+                                <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                                <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource ColorPrimary}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- 转换器 -->
         <conv:BoolToStatusConverter x:Key="BoolToStatus"/>
         <conv:BoolToColorConverter x:Key="BoolToColor"/>

@@ -29,6 +29,21 @@ public class AppSettings
     /// <summary>是否启用键盘触发点击</summary>
     public bool KeyboardTriggerEnabled { get; set; }
 
+    /// <summary>启动软件时是否自动恢复键盘监听（默认关闭，启动后处于暂停状态）</summary>
+    public bool AutoResumeListeningOnStartup { get; set; }
+
+    /// <summary>是否启用前台窗口过滤（仅当指定程序在前台时才触发点击）</summary>
+    public bool TriggerWindowFilterEnabled { get; set; }
+
+    /// <summary>前台窗口过滤白名单（进程名，如 game.exe）</summary>
+    public List<string> TriggerWindowProcesses { get; set; } = new();
+
+    /// <summary>关闭窗口到托盘时是否自动暂停全部功能</summary>
+    public bool PauseWhenMinimizedToTray { get; set; } = true;
+
+    /// <summary>锁屏时是否自动暂停全部功能</summary>
+    public bool PauseWhenLocked { get; set; } = true;
+
     /// <summary>触发按键的虚拟键码（Win32 VK_*），默认 VK_SPACE (0x20)</summary>
     /// <remarks>v1.3.0 起已弃用，由 TriggerBindings 列表替代，保留此字段仅用于旧版数据迁移</remarks>
     public int TriggerVkCode { get; set; }
