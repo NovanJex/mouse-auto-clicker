@@ -35,6 +35,16 @@ Go to [Releases](https://github.com/NovanJex/mouse-auto-clicker/releases) to dow
 
 > **Recommended**: First-time users should use the **installer** (`Setup_`), which automatically detects and installs .NET 8 Desktop Runtime.
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="assets/images/main-window.png" width="640" alt="Mouse Auto Clicker main window">
+</p>
+
+| Trigger Settings | Key Bindings | Scheduled Tasks |
+|:---:|:---:|:---:|
+| <img src="assets/images/trigger-settings.png" width="250" alt="Trigger Settings"> | <img src="assets/images/trigger-bindings.png" width="250" alt="Key Bindings"> | <img src="assets/images/scheduled-tasks.png" width="250" alt="Scheduled Tasks"> |
+
 ## ✨ Features
 
 ### Auto-Clicking

@@ -35,6 +35,16 @@ Windows PC 端鼠标自动连点器，支持自定义坐标点击、鼠标宏录
 
 > **推荐**: 首次使用请下载 **安装包**（`Setup_`），自动检测并安装 .NET 8 Desktop Runtime。
 
+## 📸 界面预览
+
+<p align="center">
+  <img src="assets/images/main-window.png" width="640" alt="鼠标连点器主界面">
+</p>
+
+| 键盘触发设置 | 快捷键绑定列表 | 计划列表 |
+|:---:|:---:|:---:|
+| <img src="assets/images/trigger-settings.png" width="250" alt="键盘触发设置"> | <img src="assets/images/trigger-bindings.png" width="250" alt="快捷键绑定列表"> | <img src="assets/images/scheduled-tasks.png" width="250" alt="计划列表"> |
+
 ## ✨ 功能特性
 
 ### 自动连点
